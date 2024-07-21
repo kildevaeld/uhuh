@@ -24,7 +24,7 @@ impl<C: 'static> Module<C> for Test {
     }
 
     fn init(
-        core: uhuh::builder::BuildCtx<'_, C>,
+        _core: uhuh::builder::BuildCtx<'_, C>,
         config: Self::Config,
     ) -> impl std::future::Future<Output = Result<(), Error>> {
         async move {
@@ -35,11 +35,11 @@ impl<C: 'static> Module<C> for Test {
 }
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() {
+async fn main() -> Result<(), Error> {
     Builder::new("Context", "Test", Mode::Development)
         .module::<Test>()
         .configure(|cfg: &mut Config| {
-            cfg.try_set("rapper", 2022).unwrap();
+            cfg.try_set("rapper", 2022)?;
             Ok(())
         })
         .initializer(register_ext::<String, _>("Hello".to_string()))
@@ -54,17 +54,15 @@ async fn main() {
             Ok(())
         })
         .configure(|cfg: &mut Config| {
-            cfg.try_set("ostelone", "Freja").unwrap();
+            cfg.try_set("ostelone", "Freja")?;
 
             Ok(())
         })
         .setup()
-        .await
-        .unwrap()
-        .cli(|app: Uhuh<&'static str>, args| async move {
+        .await?
+        .cli(|app: Uhuh<&'static str>, _args| async move {
             println!("App: {:?}", app.config());
             Ok(())
         })
         .await
-        .unwrap();
 }
