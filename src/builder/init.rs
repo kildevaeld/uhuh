@@ -35,7 +35,7 @@ impl<C> Phase for Init<C> {
                     .await?;
             }
 
-            let app = Uhuh {
+            let mut app = Uhuh {
                 ctx: self.ctx,
                 extensions: self.extensions,
                 config: self.config,
@@ -45,7 +45,7 @@ impl<C> Phase for Init<C> {
             };
 
             for module in self.modules {
-                module.finish(&app).await?;
+                module.finish(&mut app).await?;
             }
 
             Ok(app)

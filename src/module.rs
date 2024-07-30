@@ -20,7 +20,7 @@ pub trait Module<C> {
     fn init(core: BuildCtx<'_, C>, config: Self::Config)
         -> impl Future<Output = Result<(), Error>>;
 
-    fn finish(_core: &Uhuh<C>) -> impl Future<Output = Result<(), Error>> {
+    fn finish(_core: &mut Uhuh<C>) -> impl Future<Output = Result<(), Error>> {
         async move { Ok(()) }
     }
 }
@@ -40,7 +40,7 @@ pub trait DynamicModule<C> {
 
     fn finish<'a>(
         &'a self,
-        core: &'a Uhuh<C>,
+        core: &'a mut Uhuh<C>,
     ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + 'a>>;
 }
 
@@ -87,7 +87,7 @@ where
 
     fn finish<'a>(
         &'a self,
-        core: &'a Uhuh<C>,
+        core: &'a mut Uhuh<C>,
     ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + 'a>> {
         Box::pin(async move { T::finish(core).await })
     }
