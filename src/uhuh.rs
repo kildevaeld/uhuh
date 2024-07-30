@@ -19,6 +19,10 @@ impl<C> Uhuh<C> {
         &self.root
     }
 
+    pub fn mode(&self) -> &Mode {
+        &self.mode
+    }
+
     pub fn register<T: Send + Sync + Clone + 'static>(&mut self, value: T) -> &mut Self {
         self.extensions.insert(value);
         self
