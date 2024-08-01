@@ -174,12 +174,10 @@ impl<C> Phase for Setup<C> {
                     config.set(module.config_section(), cfg);
                 }
 
-                extra_modules.push_back(module);
+                extra_modules.push_front(module);
             }
 
-            self.modules.extend(extra_modules);
-
-            // extra_modules.extend(self.modules);
+            extra_modules.extend(self.modules);
 
             for cfg in self.configures {
                 cfg.call(&mut config)?;
@@ -191,7 +189,7 @@ impl<C> Phase for Setup<C> {
 
             Ok(Build {
                 ctx: self.ctx,
-                modules: self.modules, //Vec::from_iter(extra_modules),
+                modules: Vec::from_iter(extra_modules),
                 initializers: self.initializers,
                 #[cfg(feature = "cli")]
                 cmds,
