@@ -32,7 +32,7 @@ impl<C: 'static> Module<C> for Test {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Error> {
-    Builder::new("Context", "Test", Mode::Development)
+    let app = Builder::new("Context", "Test", Mode::Development)
         .module::<Test>()
         .configure(|cfg: &mut Config| {
             cfg.try_set("rapper", 2022)?;
