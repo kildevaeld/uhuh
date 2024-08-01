@@ -144,7 +144,7 @@ impl<C> Phase for Build<C> {
 
                 debug!(module = ?module.config_section(), "Initializing");
                 module
-                    .init(
+                    .build(
                         BuildCtx {
                             ctx: &mut self.ctx,
                             initializers: &mut self.initializers,

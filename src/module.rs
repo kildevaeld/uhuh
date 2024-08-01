@@ -6,8 +6,10 @@ use crate::{
     builder::{BuildCtx, SetupCtx},
     error::Error,
     uhuh::Uhuh,
+    InitCtx,
 };
 
+#[allow(unused)]
 pub trait Module<C> {
     const CONFIG_SECTION: &'static str;
 
@@ -15,12 +17,16 @@ pub trait Module<C> {
 
     fn default_config() -> Option<Self::Config>;
 
-    fn setup(core: SetupCtx<'_, C>) -> Result<(), Error>;
+    fn setup(ctx: SetupCtx<'_, C>) -> Result<(), Error>;
 
-    fn init(core: BuildCtx<'_, C>, config: Self::Config)
+    fn build(ctx: BuildCtx<'_, C>, config: Self::Config)
         -> impl Future<Output = Result<(), Error>>;
 
-    fn finish(_core: &mut Uhuh<C>) -> impl Future<Output = Result<(), Error>> {
+    fn init(ctx: InitCtx<'_, C>) -> impl Future<Output = Result<(), Error>> {
+        async move { Ok(()) }
+    }
+
+    fn finish(ctx: &mut Uhuh<C>) -> impl Future<Output = Result<(), Error>> {
         async move { Ok(()) }
     }
 }
@@ -32,10 +38,15 @@ pub trait DynamicModule<C> {
 
     fn setup(&self, core: SetupCtx<'_, C>) -> Result<(), Error>;
 
-    fn init<'a>(
+    fn build<'a>(
         &'a self,
         ctx: BuildCtx<'a, C>,
         config: Value,
+    ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + 'a>>;
+
+    fn init<'a>(
+        &'a self,
+        ctx: InitCtx<'a, C>,
     ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + 'a>>;
 
     fn finish<'a>(
@@ -66,23 +77,26 @@ where
         T::setup(core)
     }
 
-    fn init<'a>(
+    fn build<'a>(
         &'a self,
         ctx: BuildCtx<'a, C>,
         value: Value,
     ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + 'a>> {
-        // let cfg = c
-
         Box::pin(async move {
-            //
             let Ok(cfg) = vaerdi::de::from_value::<T::Config>(value.clone()) else {
                 panic!("invalid config: {:?}", value);
             };
 
-            T::init(ctx, cfg).await?;
-            // todo!()
+            T::build(ctx, cfg).await?;
             Ok(())
         })
+    }
+
+    fn init<'a>(
+        &'a self,
+        ctx: InitCtx<'a, C>,
+    ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + 'a>> {
+        Box::pin(async move { T::init(ctx).await })
     }
 
     fn finish<'a>(

@@ -23,7 +23,17 @@ impl<C> Phase for Init<C> {
     type Next = Uhuh<C>;
     fn next(mut self) -> impl Future<Output = Result<Self::Next, Error>> {
         async move {
-            //
+            for module in &self.modules {
+                module
+                    .init(InitCtx {
+                        ctx: &mut self.ctx,
+                        ext: &mut self.extensions,
+                        config: &self.config,
+                        root: &self.root,
+                    })
+                    .await?;
+            }
+
             for initializer in self.initializers.into_iter() {
                 initializer
                     .call(InitCtx {

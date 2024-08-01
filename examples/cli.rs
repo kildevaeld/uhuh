@@ -23,7 +23,7 @@ impl<C: 'static> Module<C> for Test {
         Ok(())
     }
 
-    fn init(
+    fn buil(
         _core: uhuh::builder::BuildCtx<'_, C>,
         config: Self::Config,
     ) -> impl std::future::Future<Output = Result<(), Error>> {
