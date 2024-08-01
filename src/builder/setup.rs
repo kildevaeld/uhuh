@@ -6,8 +6,9 @@ use crate::{
 };
 use extensions::concurrent::Extensions;
 use johnfig::{Config, ConfigBuilder};
-use std::{future::Future, path::PathBuf};
+use std::{any::TypeId, collections::VecDeque, future::Future, path::PathBuf};
 use tracing::debug;
+use vaerdi::hashbrown::HashSet;
 
 use super::{Build, Builder, Phase};
 
@@ -27,6 +28,7 @@ impl<C> Builder<Setup<C>> {
                 skip_on_missing_config: false,
                 root: None,
                 config_builder: ConfigBuilder::new(),
+                module_map: Default::default(),
             },
         }
     }
@@ -73,12 +75,15 @@ impl<C> Builder<Setup<C>> {
     }
 
     pub fn module<T: Module<C> + 'static>(mut self) -> Self {
-        self.phase.modules.push(box_module::<T, C>());
+        self.add_module::<T>();
         self
     }
 
     pub fn add_module<T: Module<C> + 'static>(&mut self) -> &mut Self {
-        self.phase.modules.push(box_module::<T, C>());
+        if !self.phase.module_map.contains(&TypeId::of::<T>()) {
+            self.phase.modules.push(box_module::<T, C>());
+            self.phase.module_map.insert(TypeId::of::<T>());
+        }
         self
     }
 
@@ -99,6 +104,7 @@ pub struct Setup<C> {
     skip_on_missing_config: bool,
     root: Option<PathBuf>,
     config_builder: ConfigBuilder,
+    module_map: HashSet<TypeId>,
 }
 
 impl<C> Phase for Setup<C> {
@@ -107,6 +113,7 @@ impl<C> Phase for Setup<C> {
         async move {
             let mut config = Config::default();
             let mut extensions = Extensions::default();
+            let mut modules = Vec::default();
 
             #[cfg(feature = "cli")]
             let mut cmds = Vec::default();
@@ -120,6 +127,8 @@ impl<C> Phase for Setup<C> {
                     #[cfg(feature = "cli")]
                     cmds: &mut cmd,
                     extensions: &mut extensions,
+                    extra_modules: &mut modules,
+                    module_map: &mut self.module_map,
                 })?;
 
                 #[cfg(feature = "cli")]
@@ -134,6 +143,42 @@ impl<C> Phase for Setup<C> {
                 }
             }
 
+            let mut extra_modules: VecDeque<Box<dyn DynamicModule<C>>> = VecDeque::default();
+
+            loop {
+                let Some(module) = modules.pop() else {
+                    break;
+                };
+
+                #[cfg(feature = "cli")]
+                let mut cmd = None;
+                debug!(module = ?module.config_section(), "Setup module");
+                module.setup(SetupCtx {
+                    ctx: &mut self.ctx,
+                    module_name: module.config_section(),
+                    #[cfg(feature = "cli")]
+                    cmds: &mut cmd,
+                    extensions: &mut extensions,
+                    extra_modules: &mut modules,
+                    module_map: &mut self.module_map,
+                })?;
+
+                #[cfg(feature = "cli")]
+                if let Some(cmd) = cmd {
+                    debug!(module = ?module.config_section(), "Adding command");
+                    cmds.push(cmd);
+                }
+
+                if let Some(cfg) = module.default_config() {
+                    debug!(module = ?module.config_section(), cfg = ?cfg, "Setting default config");
+                    config.set(module.config_section(), cfg);
+                }
+
+                extra_modules.push_front(module);
+            }
+
+            extra_modules.extend(self.modules);
+
             for cfg in self.configures {
                 cfg.call(&mut config)?;
             }
@@ -144,7 +189,7 @@ impl<C> Phase for Setup<C> {
 
             Ok(Build {
                 ctx: self.ctx,
-                modules: self.modules,
+                modules: Vec::from_iter(extra_modules),
                 initializers: self.initializers,
                 #[cfg(feature = "cli")]
                 cmds,
@@ -166,6 +211,8 @@ pub struct SetupCtx<'a, C> {
     #[cfg(feature = "cli")]
     cmds: &'a mut Option<Cmd<C>>,
     extensions: &'a mut Extensions,
+    module_map: &'a mut HashSet<TypeId>,
+    extra_modules: &'a mut Vec<Box<dyn DynamicModule<C>>>,
 }
 
 impl<'a, C> SetupCtx<'a, C> {
@@ -189,6 +236,14 @@ impl<'a, C> SetupCtx<'a, C> {
 
     pub fn register<T: Send + Sync + Clone + 'static>(&mut self, value: T) -> &mut Self {
         self.extensions.insert(value);
+        self
+    }
+
+    pub fn add_module<T: Module<C> + 'static>(&mut self) -> &mut Self {
+        if !self.module_map.contains(&TypeId::of::<T>()) {
+            self.extra_modules.push(box_module::<T, C>());
+            self.module_map.insert(TypeId::of::<T>());
+        }
         self
     }
 }
