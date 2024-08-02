@@ -84,6 +84,10 @@ impl<'a, C> InitCtx<'a, C> {
         self.ext.get::<T>()
     }
 
+    pub fn get_mut<T: Send + Sync + 'static>(&mut self) -> Option<&mut T> {
+        self.ext.get_mut::<T>()
+    }
+
     pub fn config(&self) -> &Config {
         self.config
     }

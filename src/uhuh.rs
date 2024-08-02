@@ -32,6 +32,10 @@ impl<C> Uhuh<C> {
         self.extensions.get::<T>()
     }
 
+    pub fn get_mut<T: Send + Sync + 'static>(&mut self) -> Option<&mut T> {
+        self.extensions.get_mut::<T>()
+    }
+
     pub fn config(&self) -> &Config {
         &self.config
     }
