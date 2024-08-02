@@ -194,7 +194,7 @@ impl<'a, C> BuildCtx<'a, C> {
         self
     }
 
-    pub fn register<T: Send + Sync + Clone + 'static>(&mut self, value: T) -> &mut Self {
+    pub fn register<T: Send + Sync + 'static>(&mut self, value: T) -> &mut Self {
         self.extensions.insert(value);
         self
     }

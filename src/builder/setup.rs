@@ -234,7 +234,7 @@ impl<'a, C> SetupCtx<'a, C> {
         self.module_name
     }
 
-    pub fn register<T: Send + Sync + Clone + 'static>(&mut self, value: T) -> &mut Self {
+    pub fn register<T: Send + Sync + 'static>(&mut self, value: T) -> &mut Self {
         self.extensions.insert(value);
         self
     }
