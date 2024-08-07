@@ -172,7 +172,6 @@ impl<C> Phase for Build<C> {
 }
 
 pub struct BuildCtx<'a, C> {
-    #[allow(unused)]
     ctx: &'a mut C,
     initializers: &'a mut Vec<Box<dyn Initializer<C>>>,
     extensions: &'a mut Extensions,
