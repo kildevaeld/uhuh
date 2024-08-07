@@ -207,3 +207,16 @@ impl<'a, C> BuildCtx<'a, C> {
         self.extensions.get_mut::<T>()
     }
 }
+
+impl<'a, C> core::ops::Deref for BuildCtx<'a, C> {
+    type Target = C;
+    fn deref(&self) -> &Self::Target {
+        self.ctx
+    }
+}
+
+impl<'a, C> core::ops::DerefMut for BuildCtx<'a, C> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.ctx
+    }
+}
