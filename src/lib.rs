@@ -1,14 +1,17 @@
 mod config_ext;
 mod configure;
+mod context;
 mod error;
 mod initializer;
 mod mode;
 mod module;
 mod uhuh;
+
 pub use self::{
     builder::{BuildCtx, Builder, InitCtx, SetupCtx},
     config_ext::ConfigBuilderExt,
     configure::Configure,
+    context::Context,
     error::Error,
     initializer::Initializer,
     mode::Mode,

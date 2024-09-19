@@ -1,12 +1,12 @@
 use uhuh::{
     builder::{register_ext, InitCtx},
-    Builder, Config, Error, Mode, Module, Uhuh,
+    Builder, Config, Context, Error, Mode, Module, Uhuh,
 };
 use vaerdi::Value;
 
 struct Test;
 
-impl<C: 'static> Module<C> for Test {
+impl<C: Context + 'static> Module<C> for Test {
     const CONFIG_SECTION: &'static str = "test";
 
     type Config = Value;
@@ -36,17 +36,16 @@ impl<C: 'static> Module<C> for Test {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Error> {
-    Builder::new("Context", "Test", Mode::Development)
+    Builder::new((), "Test", Mode::Development)
         .module::<Test>()
         .configure(|cfg: &mut Config| {
             cfg.try_set("rapper", 2022)?;
             Ok(())
         })
         .initializer(register_ext::<String, _>("Hello".to_string()))
-        .initializer(|core: InitCtx<&'static str>| {
+        .initializer(|core: InitCtx<()>| {
             //
 
-            println!("initializer: {}", *core);
             println!("ext: {:?}", core.get::<String>());
             println!("config: {:?}", core.config().get("rapper"));
             println!("Root: {}", core.root().display());
@@ -60,7 +59,7 @@ async fn main() -> Result<(), Error> {
         })
         .setup()
         .await?
-        .cli(|app: Uhuh<&'static str>, _args| async move {
+        .cli(|app: Uhuh, _args| async move {
             println!("App: {:?}", app.config());
             Ok(())
         })

@@ -1,4 +1,6 @@
-use crate::{initializer::Initializer, module::DynamicModule, uhuh::Uhuh, Error, Mode};
+use crate::{
+    context::Context, initializer::Initializer, module::DynamicModule, uhuh::Uhuh, Error, Mode,
+};
 use extensions::concurrent::Extensions;
 use johnfig::Config;
 use std::{
@@ -19,8 +21,8 @@ pub struct Init<C> {
     pub(super) modules: Vec<Box<dyn DynamicModule<C>>>,
 }
 
-impl<C> Phase for Init<C> {
-    type Next = Uhuh<C>;
+impl<C: Context> Phase for Init<C> {
+    type Next = C::Output;
     fn next(mut self) -> impl Future<Output = Result<Self::Next, Error>> {
         async move {
             for module in &self.modules {
@@ -46,13 +48,14 @@ impl<C> Phase for Init<C> {
             }
 
             let mut app = Uhuh {
-                ctx: self.ctx,
                 extensions: self.extensions,
                 config: self.config,
                 mode: self.mode,
                 root: self.root,
                 name: self.name,
             };
+
+            let mut app = self.ctx.build(app).await?;
 
             for module in self.modules {
                 module.finish(&mut app).await?;

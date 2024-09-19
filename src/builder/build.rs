@@ -4,21 +4,23 @@ use johnfig::ConfigBuilder;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
-use crate::{module::DynamicModule, uhuh::Uhuh, ConfigBuilderExt, Error, Initializer, Mode};
+use crate::{
+    context::Context, module::DynamicModule, uhuh::Uhuh, ConfigBuilderExt, Error, Initializer, Mode,
+};
 
 use super::{Builder, Init, Phase};
 
 #[cfg(feature = "cli")]
 use super::cmd::*;
 
-impl<C> Builder<Build<C>> {
+impl<C: Context> Builder<Build<C>> {
     pub async fn build(self) -> Result<Builder<Init<C>>, Error> {
         Ok(Builder {
             phase: self.phase.next().await?,
         })
     }
 
-    pub async fn build_app(self) -> Result<Uhuh<C>, Error> {
+    pub async fn build_app(self) -> Result<C::Output, Error> {
         self.phase.next().await?.next().await
     }
 
@@ -112,7 +114,7 @@ pub struct Build<C> {
     pub(super) root: Option<PathBuf>,
 }
 
-impl<C> Phase for Build<C> {
+impl<C: Context> Phase for Build<C> {
     type Next = Init<C>;
     fn next(mut self) -> impl Future<Output = Result<Self::Next, Error>> {
         async move {

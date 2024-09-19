@@ -4,13 +4,13 @@ use vaerdi::Value;
 
 use crate::{
     builder::{BuildCtx, SetupCtx},
+    context::Context,
     error::Error,
-    uhuh::Uhuh,
     InitCtx,
 };
 
 #[allow(unused)]
-pub trait Module<C> {
+pub trait Module<C: Context> {
     const CONFIG_SECTION: &'static str;
 
     type Config: serde::Serialize + serde::de::DeserializeOwned;
@@ -26,12 +26,12 @@ pub trait Module<C> {
         async move { Ok(()) }
     }
 
-    fn finish(ctx: &mut Uhuh<C>) -> impl Future<Output = Result<(), Error>> {
+    fn finish(ctx: &mut C::Output) -> impl Future<Output = Result<(), Error>> {
         async move { Ok(()) }
     }
 }
 
-pub trait DynamicModule<C> {
+pub trait DynamicModule<C: Context> {
     fn config_section(&self) -> &str;
 
     fn default_config(&self) -> Option<Value>;
@@ -51,11 +51,11 @@ pub trait DynamicModule<C> {
 
     fn finish<'a>(
         &'a self,
-        core: &'a mut Uhuh<C>,
+        core: &'a mut C::Output,
     ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + 'a>>;
 }
 
-pub fn box_module<T: Module<C> + 'static, C>() -> Box<dyn DynamicModule<C>> {
+pub fn box_module<T: Module<C> + 'static, C: Context>() -> Box<dyn DynamicModule<C>> {
     Box::new(ModuleDyn(PhantomData::<T>))
 }
 
@@ -64,6 +64,7 @@ pub struct ModuleDyn<T>(PhantomData<T>);
 impl<T, C> DynamicModule<C> for ModuleDyn<T>
 where
     T: Module<C>,
+    C: Context,
 {
     fn config_section(&self) -> &str {
         T::CONFIG_SECTION
@@ -101,7 +102,7 @@ where
 
     fn finish<'a>(
         &'a self,
-        core: &'a mut Uhuh<C>,
+        core: &'a mut C::Output,
     ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + 'a>> {
         Box::pin(async move { T::finish(core).await })
     }

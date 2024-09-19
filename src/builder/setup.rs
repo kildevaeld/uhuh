@@ -1,5 +1,6 @@
 use crate::{
     configure::Configure,
+    context::Context,
     initializer::Initializer,
     module::{box_module, DynamicModule},
     Error, Mode, Module,
@@ -15,7 +16,10 @@ use super::{Build, Builder, Phase};
 #[cfg(feature = "cli")]
 use super::cmd::*;
 
-impl<C> Builder<Setup<C>> {
+impl<C> Builder<Setup<C>>
+where
+    C: Context,
+{
     pub fn new(ctx: C, name: &str, mode: Mode) -> Self {
         Self {
             phase: Setup {
@@ -107,7 +111,7 @@ pub struct Setup<C> {
     module_map: HashSet<TypeId>,
 }
 
-impl<C> Phase for Setup<C> {
+impl<C: Context> Phase for Setup<C> {
     type Next = Build<C>;
     fn next(mut self) -> impl Future<Output = Result<Self::Next, Error>> {
         async move {
@@ -215,7 +219,7 @@ pub struct SetupCtx<'a, C> {
     extra_modules: &'a mut Vec<Box<dyn DynamicModule<C>>>,
 }
 
-impl<'a, C> SetupCtx<'a, C> {
+impl<'a, C: Context> SetupCtx<'a, C> {
     #[cfg(feature = "cli")]
     pub fn cmd<A>(&mut self, cmd: clap::Command, action: A) -> &mut Self
     where

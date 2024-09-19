@@ -5,8 +5,7 @@ use johnfig::Config;
 
 use crate::Mode;
 
-pub struct Uhuh<C> {
-    pub ctx: C,
+pub struct Uhuh {
     pub extensions: Extensions,
     pub config: Config,
     pub mode: Mode,
@@ -14,7 +13,7 @@ pub struct Uhuh<C> {
     pub root: PathBuf,
 }
 
-impl<C> Uhuh<C> {
+impl Uhuh {
     pub fn root(&self) -> &Path {
         &self.root
     }
