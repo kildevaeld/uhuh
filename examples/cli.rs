@@ -57,8 +57,6 @@ async fn main() -> Result<(), Error> {
 
             Ok(())
         })
-        .setup()
-        .await?
         .cli(|app: Uhuh, _args| async move {
             println!("App: {:?}", app.config());
             Ok(())

@@ -96,6 +96,18 @@ where
             phase: self.phase.next().await?,
         })
     }
+
+    pub async fn build(self) -> Result<C::Output, Error> {
+        self.setup().await?.build_app().await
+    }
+
+    #[cfg(feature = "cli")]
+    pub async fn cli<T>(self, run: T) -> Result<(), Error>
+    where
+        T: CmdAction<C>,
+    {
+        self.setup().await?.cli(run).await
+    }
 }
 
 pub struct Setup<C> {

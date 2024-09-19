@@ -85,7 +85,8 @@ impl<C: Context> Builder<Build<C>> {
         match cli.subcommand() {
             Some((name, args)) => {
                 let Some(cmd) = cmds.into_iter().find(|m| m.cmd.get_name() == name) else {
-                    panic!("unknown command");
+                    eprintln!("unknown command");
+                    return Ok(());
                 };
 
                 cmd.action.call(app, args.clone()).await?;

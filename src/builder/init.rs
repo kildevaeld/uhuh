@@ -47,7 +47,7 @@ impl<C: Context> Phase for Init<C> {
                     .await?;
             }
 
-            let mut app = Uhuh {
+            let app = Uhuh {
                 extensions: self.extensions,
                 config: self.config,
                 mode: self.mode,

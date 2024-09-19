@@ -83,9 +83,7 @@ async fn main() -> Result<(), Error> {
 
             Ok(())
         })
-        .setup()
-        .await?
-        .build_app()
+        .build()
         .await?;
 
     Ok(())
