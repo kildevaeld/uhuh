@@ -5,6 +5,7 @@ use crate::{
     module::{box_module, DynamicModule},
     Error, Mode, Module,
 };
+use bobestyrer::AnyExecutor;
 use extensions::concurrent::Extensions;
 use johnfig::{Config, ConfigBuilder};
 use std::{any::TypeId, collections::VecDeque, future::Future, path::PathBuf};
@@ -20,7 +21,7 @@ impl<C> Builder<Setup<C>>
 where
     C: Context,
 {
-    pub fn new(ctx: C, name: &str, mode: Mode) -> Self {
+    pub fn new<E: Into<AnyExecutor>>(ctx: C, name: &str, mode: Mode, executor: E) -> Self {
         Self {
             phase: Setup {
                 ctx,
@@ -33,6 +34,7 @@ where
                 root: None,
                 config_builder: ConfigBuilder::new(),
                 module_map: Default::default(),
+                executor: executor.into(),
             },
         }
     }
@@ -135,6 +137,7 @@ pub struct Setup<C> {
     root: Option<PathBuf>,
     config_builder: ConfigBuilder,
     module_map: HashSet<TypeId>,
+    executor: AnyExecutor,
 }
 
 impl<C: Context> Phase for Setup<C> {
@@ -229,6 +232,7 @@ impl<C: Context> Phase for Setup<C> {
                 name: self.name,
                 skip_on_missing_config: self.skip_on_missing_config,
                 root: self.root,
+                executor: self.executor,
             })
         }
     }

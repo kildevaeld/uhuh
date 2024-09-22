@@ -1,3 +1,4 @@
+use bobestyrer::AnyExecutor;
 use extensions::concurrent::Extensions;
 use futures_core::Future;
 use johnfig::ConfigBuilder;
@@ -111,6 +112,7 @@ pub struct Build<C> {
     pub(super) name: String,
     pub(super) skip_on_missing_config: bool,
     pub(super) root: Option<PathBuf>,
+    pub(super) executor: AnyExecutor,
 }
 
 impl<C: Context> Phase for Build<C> {

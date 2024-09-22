@@ -2,6 +2,7 @@ mod build;
 mod builder;
 #[cfg(feature = "cli")]
 mod cmd;
+mod config;
 mod init;
 mod setup;
 

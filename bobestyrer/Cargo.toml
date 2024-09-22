@@ -1,0 +1,15 @@
+[package]
+name = "bobestyrer"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+# default = ["tokio", "smol", "any"]
+tokio = ["dep:tokio"]
+smol = ["dep:smol"]
+any = ["tokio"]
+
+
+[dependencies]
+tokio = { version = "1", features = ["rt"], optional = true }
+smol = { version = "2", optional = true }

@@ -1,34 +1,5 @@
-[package]
-name = "uhuh"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-[features]
-default = []
-cli = ["dep:clap"]
+resolver = "2"
 
-[dependencies]
-vaerdi = { git = "https://github.com/kildevaeld/vaerdi-rs", features = [
-  "serde",
-] }
-serde = { version = "1" }
-extensions = { version = "0.2" }
-tracing = { version = "0.1" }
-johnfig = { git = "https://github.com/kildevaeld/johnfig-rs", features = [
-  "builder",
-  "serde",
-  "json",
-] }
-futures-core = { version = "0.3" }
-futures-channel = { version = "0.3" }
-
-clap = { version = "4", features = ["string"], optional = true }
-
-
-[dev-dependencies]
-tokio = { version = "1", features = ["rt", "macros"] }
-
-[[example]]
-path = "examples/cli.rs"
-name = "cli"
-required-features = ["cli"]
+members = [ "bobestyrer","uhuh"]
