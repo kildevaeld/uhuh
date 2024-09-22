@@ -47,6 +47,20 @@ where
         self
     }
 
+    pub fn config_pattern(mut self, pattern: impl ToString) -> Self {
+        self.phase
+            .config_builder
+            .add_name_pattern(pattern.to_string());
+        self
+    }
+
+    pub fn add_config_pattern(&mut self, pattern: impl ToString) -> &mut Self {
+        self.phase
+            .config_builder
+            .add_name_pattern(pattern.to_string());
+        self
+    }
+
     pub fn skip_missing_config(mut self, on: bool) -> Self {
         self.phase.skip_on_missing_config = on;
         self

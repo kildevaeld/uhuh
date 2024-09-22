@@ -4,9 +4,7 @@ use johnfig::ConfigBuilder;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
-use crate::{
-    context::Context, module::DynamicModule, uhuh::Uhuh, ConfigBuilderExt, Error, Initializer, Mode,
-};
+use crate::{context::Context, module::DynamicModule, ConfigBuilderExt, Error, Initializer, Mode};
 
 use super::{Builder, Init, Phase};
 
@@ -126,9 +124,7 @@ impl<C: Context> Phase for Build<C> {
 
             debug!(path = ?root, "Root directory");
 
-            let config = self.config.with_name_pattern("*.{ext}");
-
-            let config = config.load().await?;
+            let config = self.config.load(self.mode.clone()).await?;
 
             debug!(files = ?config.files(), "Using config files");
 
