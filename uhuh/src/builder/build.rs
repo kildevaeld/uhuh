@@ -69,7 +69,7 @@ impl<C: Context> Builder<Build<C>> {
 
             let path = PathBuf::from(config_path);
 
-            if path.is_file() {
+            if !path.is_file() {
                 self.phase
                     .config
                     .add_search_path(path)
