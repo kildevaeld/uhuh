@@ -1,13 +1,12 @@
 use bobestyrer::AnyExecutor;
 use extensions::concurrent::Extensions;
 use futures_core::Future;
-use johnfig::ConfigBuilder;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
-use crate::{context::Context, module::DynamicModule, ConfigBuilderExt, Error, Initializer, Mode};
+use crate::{context::Context, module::DynamicModule, Error, Initializer, Mode};
 
-use super::{Builder, Init, Phase};
+use super::{config::ConfigBuilder, Builder, Init, Phase};
 
 #[cfg(feature = "cli")]
 use super::cmd::*;
@@ -67,10 +66,17 @@ impl<C: Context> Builder<Build<C>> {
 
         if let Some(config_path) = cli.get_one::<String>("config") {
             debug!(config_path = ?config_path, "Using config paths");
-            self.phase
-                .config
-                .add_search_path(config_path)
-                .map_err(Error::new)?;
+
+            let path = PathBuf::from(config_path);
+
+            if path.is_file() {
+                self.phase
+                    .config
+                    .add_search_path(path)
+                    .map_err(Error::new)?;
+            } else {
+                self.phase.config.add_file(path);
+            }
         }
 
         if let Some(root) = cli.get_one::<String>("root") {
@@ -126,7 +132,7 @@ impl<C: Context> Phase for Build<C> {
 
             debug!(path = ?root, "Root directory");
 
-            let config = self.config.load(self.mode.clone()).await?;
+            let config = self.config.build(&self.executor, self.mode.clone()).await?;
 
             debug!(files = ?config.files(), "Using config files");
 

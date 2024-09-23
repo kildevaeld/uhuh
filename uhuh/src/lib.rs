@@ -1,4 +1,3 @@
-mod config_ext;
 mod configure;
 mod context;
 mod error;
@@ -9,7 +8,6 @@ mod uhuh;
 
 pub use self::{
     builder::{BuildCtx, Builder, InitCtx, SetupCtx},
-    config_ext::ConfigBuilderExt,
     configure::Configure,
     context::Context,
     error::Error,

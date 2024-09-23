@@ -17,7 +17,7 @@ impl<C: Context + 'static> Module<C> for Test {
     }
 
     fn setup(mut core: uhuh::builder::SetupCtx<'_, C>) -> Result<(), Error> {
-        core.cmd(clap::Command::new("test"), |app, args| async move {
+        core.cmd(clap::Command::new("test"), |_app, _args| async move {
             println!("Test");
             Ok(())
         });
