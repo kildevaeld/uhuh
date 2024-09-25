@@ -1,0 +1,13 @@
+[package]
+name = "uhuh-tasks"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+uhuh-ext = { path = "../uhuh-ext" }
+async-trait = "0.1"
+bytes = "1"
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+trait-variant = "0.1"
+infinitask = { path = "../infinitask" }
