@@ -1,7 +1,7 @@
 use bobestyrer::Tokio;
 use uhuh::{
     builder::{register_ext, InitCtx},
-    Builder, Config, Context, Error, Mode, Module, Uhuh,
+    Builder, Config, Context, Error, Mode, Module,
 };
 use vaerdi::Value;
 

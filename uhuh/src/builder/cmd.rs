@@ -1,7 +1,7 @@
 use futures_core::{future::LocalBoxFuture, Future};
 use std::marker::PhantomData;
 
-use crate::{context::Context, uhuh::Uhuh, Error};
+use crate::{context::Context, Error};
 
 pub struct Cmd<C> {
     pub(super) cmd: clap::Command,

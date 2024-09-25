@@ -200,6 +200,7 @@ pub enum AnyJoinError {
     Smol(Infallible),
 }
 
+#[cfg(feature = "any")]
 impl core::fmt::Display for AnyJoinError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
@@ -211,6 +212,7 @@ impl core::fmt::Display for AnyJoinError {
     }
 }
 
+#[cfg(feature = "any")]
 impl core::error::Error for AnyJoinError {}
 
 #[derive(Debug, Clone)]

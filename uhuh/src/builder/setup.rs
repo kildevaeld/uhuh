@@ -7,12 +7,12 @@ use crate::{
 };
 use bobestyrer::AnyExecutor;
 use extensions::concurrent::Extensions;
-use johnfig::{Config, ConfigBuilder};
+use johnfig::Config;
 use std::{any::TypeId, collections::VecDeque, future::Future, path::PathBuf};
 use tracing::debug;
 use vaerdi::hashbrown::HashSet;
 
-use super::{Build, Builder, Phase};
+use super::{config::ConfigBuilder, Build, Builder, Phase};
 
 #[cfg(feature = "cli")]
 use super::cmd::*;
@@ -27,12 +27,11 @@ where
                 ctx,
                 modules: Vec::default(),
                 initializers: Vec::default(),
-                configures: Vec::default(),
                 mode,
                 name: name.to_string(),
                 skip_on_missing_config: false,
                 root: None,
-                config_builder: ConfigBuilder::new(),
+                config_builder: ConfigBuilder::default(),
                 module_map: Default::default(),
                 executor: executor.into(),
             },
@@ -52,14 +51,34 @@ where
     pub fn config_pattern(mut self, pattern: impl ToString) -> Self {
         self.phase
             .config_builder
-            .add_name_pattern(pattern.to_string());
+            .add_filename_pattern(pattern.to_string());
         self
     }
 
     pub fn add_config_pattern(&mut self, pattern: impl ToString) -> &mut Self {
         self.phase
             .config_builder
-            .add_name_pattern(pattern.to_string());
+            .add_filename_pattern(pattern.to_string());
+        self
+    }
+
+    pub fn config_search_path(mut self, path: impl Into<PathBuf>) -> Result<Self, Error> {
+        self.phase.config_builder.add_search_path(path.into())?;
+        Ok(self)
+    }
+
+    pub fn add_config_search_path(&mut self, path: impl Into<PathBuf>) -> Result<&mut Self, Error> {
+        self.phase.config_builder.add_search_path(path.into())?;
+        Ok(self)
+    }
+
+    pub fn config_file(mut self, path: impl Into<PathBuf>) -> Self {
+        self.phase.config_builder.add_file(path.into());
+        self
+    }
+
+    pub fn add_config_file(&mut self, path: impl Into<PathBuf>) -> &mut Self {
+        self.phase.config_builder.add_file(path.into());
         self
     }
 
@@ -70,17 +89,17 @@ where
 
     pub fn configure<T>(mut self, func: T) -> Self
     where
-        T: Configure + 'static,
+        T: Configure + Send + 'static,
     {
-        self.phase.configures.push(Box::new(func));
+        self.phase.config_builder.add_configure(Box::new(func));
         self
     }
 
     pub fn add_configure<T>(&mut self, func: T) -> &mut Self
     where
-        T: Configure + 'static,
+        T: Configure + Send + 'static,
     {
-        self.phase.configures.push(Box::new(func));
+        self.phase.config_builder.add_configure(Box::new(func));
         self
     }
 
@@ -130,7 +149,6 @@ pub struct Setup<C> {
     ctx: C,
     modules: Vec<Box<dyn DynamicModule<C>>>,
     initializers: Vec<Box<dyn Initializer<C>>>,
-    configures: Vec<Box<dyn Configure>>,
     mode: Mode,
     name: String,
     skip_on_missing_config: bool,
@@ -212,13 +230,11 @@ impl<C: Context> Phase for Setup<C> {
 
             extra_modules.extend(self.modules);
 
-            for cfg in self.configures {
-                cfg.call(&mut config)?;
-            }
-
-            self.config_builder.add_default(move |cfg| {
-                cfg.extend(config.clone());
-            });
+            self.config_builder
+                .add_configure(Box::new(move |cfg: &mut Config| {
+                    cfg.extend(config);
+                    Ok(())
+                }));
 
             Ok(Build {
                 ctx: self.ctx,
