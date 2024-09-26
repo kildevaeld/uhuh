@@ -1,8 +1,6 @@
 use async_trait::async_trait;
 use infinitask::{InifiniTask, TaskId, TaskList};
 
-use crate::UhuhTask;
-
 struct RunnerDelegate;
 
 #[async_trait(?Send)]
