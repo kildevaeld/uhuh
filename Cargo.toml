@@ -2,4 +2,4 @@
 
 resolver = "2"
 
-members = ["bobestyrer", "uhuh", "uhuh-ext", "uhuh-tasks", "infinitask"]
+members = ["bobestyrer", "uhuh", "uhuh-ext", "uhuh-tasks", "infinitask", "uhuh-axum"]

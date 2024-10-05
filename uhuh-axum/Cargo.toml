@@ -1,0 +1,13 @@
+[package]
+name = "uhuh-axum"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+uhuh-ext = { path = "../uhuh-ext" }
+
+axum = { version = "0.7" }
+tower = { version = "0.5" }
+
+tracing = { version = "0.1" }
+futures-core = { version = "0.3" }

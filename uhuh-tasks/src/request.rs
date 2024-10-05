@@ -39,7 +39,7 @@ pub trait Transform<C, R: Request<C>> {
     type Output;
     type Error;
 
-    async fn transform(&self, ctx: &C, req: R::Output) -> Result<Self::Output, Self::Error>;
+    async fn transform(self, ctx: &C, req: R::Output) -> Result<Self::Output, Self::Error>;
 }
 
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]

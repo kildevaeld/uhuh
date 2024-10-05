@@ -13,15 +13,21 @@ pub struct ContextBuilder {
 }
 
 impl uhuh_ext::ContextBuilder for ContextBuilder {
+    type Context = Ctx;
+    type Error = ();
     fn register<T: 'static + Send + Sync>(&mut self, value: T) -> Option<T> {
         self.ext.insert(value)
     }
-}
 
-impl ContextBuilder {
-    pub fn build(self) -> Ctx {
-        Ctx {
-            ext: Arc::new(self.ext),
+    fn get<T: 'static + Send + Sync>(&self) -> Option<&T> {
+        self.ext.get()
+    }
+
+    fn build(self) -> impl std::future::Future<Output = Result<Self::Context, Self::Error>> + Send {
+        async move {
+            Ok(Ctx {
+                ext: Arc::new(self.ext),
+            })
         }
     }
 }
