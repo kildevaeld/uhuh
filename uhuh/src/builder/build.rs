@@ -168,7 +168,7 @@ impl<C: Context> Phase for Build<C> {
                     .await?;
             }
 
-            self.plugins.build(&mut self.extensions).await?;
+            self.plugins.build(&mut self.extensions, &root).await?;
 
             Ok(Init {
                 ctx: self.ctx,

@@ -1,6 +1,7 @@
 use std::{
     any::{Any, TypeId},
     collections::HashMap,
+    path::Path,
 };
 
 use extensions::concurrent::Extensions;
@@ -11,11 +12,15 @@ use crate::Error;
 pub trait Plugin<C> {
     type Output;
     type Error: std::error::Error + Send + Sync;
-    fn build(self) -> impl Future<Output = Result<Self::Output, Self::Error>> + Send;
+    fn build(self, root: &Path) -> impl Future<Output = Result<Self::Output, Self::Error>> + Send;
 }
 
 pub(crate) trait DynamicPlugin<C> {
-    fn build(self: Box<Self>, extensions: &mut Extensions) -> BoxFuture<'_, Result<(), Error>>;
+    fn build<'a>(
+        self: Box<Self>,
+        extensions: &'a mut Extensions,
+        root: &'a Path,
+    ) -> BoxFuture<'a, Result<(), Error>>;
 
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
@@ -31,9 +36,13 @@ where
     T::Output: Send + Sync + 'static,
     T::Error: 'static,
 {
-    fn build(self: Box<Self>, extensions: &mut Extensions) -> BoxFuture<'_, Result<(), Error>> {
+    fn build<'a>(
+        self: Box<Self>,
+        extensions: &'a mut Extensions,
+        path: &'a Path,
+    ) -> BoxFuture<'a, Result<(), Error>> {
         Box::pin(async move {
-            let ret = self.inner.build().await.map_err(Error::new)?;
+            let ret = self.inner.build(path).await.map_err(Error::new)?;
             extensions.insert(ret);
             Ok(())
         })
@@ -124,9 +133,13 @@ impl<C> PluginsList<C> {
             .ok_or_else(|| Error::new("Plugin not registered"))
     }
 
-    pub async fn build(self, extensions: &mut Extensions) -> Result<(), Error> {
+    pub async fn build<'a>(
+        self,
+        extensions: &'a mut Extensions,
+        root: &'a Path,
+    ) -> Result<(), Error> {
         for plugin in self.plugins.into_values() {
-            plugin.build(extensions).await?;
+            plugin.build(extensions, root).await?;
         }
         Ok(())
     }
