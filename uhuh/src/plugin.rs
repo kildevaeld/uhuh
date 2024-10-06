@@ -7,12 +7,16 @@ use std::{
 use extensions::concurrent::Extensions;
 use futures_core::{future::BoxFuture, Future};
 
-use crate::Error;
+use crate::{Error, Mode};
 
 pub trait Plugin<C> {
     type Output;
     type Error: std::error::Error + Send + Sync;
-    fn build(self, root: &Path) -> impl Future<Output = Result<Self::Output, Self::Error>> + Send;
+    fn build(
+        self,
+        root: &Path,
+        mode: &Mode,
+    ) -> impl Future<Output = Result<Self::Output, Self::Error>> + Send;
 }
 
 pub(crate) trait DynamicPlugin<C> {
@@ -20,6 +24,7 @@ pub(crate) trait DynamicPlugin<C> {
         self: Box<Self>,
         extensions: &'a mut Extensions,
         root: &'a Path,
+        mode: &'a Mode,
     ) -> BoxFuture<'a, Result<(), Error>>;
 
     fn as_any(&self) -> &dyn Any;
@@ -40,9 +45,10 @@ where
         self: Box<Self>,
         extensions: &'a mut Extensions,
         path: &'a Path,
+        mode: &'a Mode,
     ) -> BoxFuture<'a, Result<(), Error>> {
         Box::pin(async move {
-            let ret = self.inner.build(path).await.map_err(Error::new)?;
+            let ret = self.inner.build(path, mode).await.map_err(Error::new)?;
             extensions.insert(ret);
             Ok(())
         })
@@ -137,9 +143,10 @@ impl<C> PluginsList<C> {
         self,
         extensions: &'a mut Extensions,
         root: &'a Path,
+        mode: &'a Mode,
     ) -> Result<(), Error> {
         for plugin in self.plugins.into_values() {
-            plugin.build(extensions, root).await?;
+            plugin.build(extensions, root, mode).await?;
         }
         Ok(())
     }
