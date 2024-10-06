@@ -14,3 +14,10 @@ where
         (self)(config)
     }
 }
+
+impl Configure for Config {
+    fn call(self: Box<Self>, config: &mut Config) -> Result<(), Error> {
+        config.extend(*self);
+        Ok(())
+    }
+}

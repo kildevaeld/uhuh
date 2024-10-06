@@ -171,6 +171,7 @@ impl<C: Context> Phase for Setup<C> {
             for module in &self.modules {
                 #[cfg(feature = "cli")]
                 let mut cmd = None;
+
                 debug!(module = ?module.config_section(), "Setup module");
                 module.setup(SetupCtx {
                     ctx: &mut self.ctx,

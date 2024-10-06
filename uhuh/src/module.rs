@@ -17,7 +17,9 @@ pub trait Module<C: Context> {
 
     fn default_config() -> Option<Self::Config>;
 
-    fn setup(ctx: SetupCtx<'_, C>) -> Result<(), Error>;
+    fn setup(ctx: SetupCtx<'_, C>) -> Result<(), Error> {
+        Ok(())
+    }
 
     fn build(ctx: BuildCtx<'_, C>, config: Self::Config)
         -> impl Future<Output = Result<(), Error>>;
