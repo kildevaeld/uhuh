@@ -4,6 +4,7 @@ mod error;
 mod initializer;
 mod mode;
 mod module;
+mod plugin;
 mod uhuh;
 
 pub use self::{
@@ -14,6 +15,7 @@ pub use self::{
     initializer::Initializer,
     mode::Mode,
     module::Module,
+    plugin::Plugin,
     uhuh::Uhuh,
 };
 

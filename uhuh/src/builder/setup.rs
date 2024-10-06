@@ -3,7 +3,8 @@ use crate::{
     context::Context,
     initializer::Initializer,
     module::{box_module, DynamicModule},
-    Error, Mode, Module,
+    plugin::PluginsList,
+    Error, Mode, Module, Plugin,
 };
 use bobestyrer::AnyExecutor;
 use extensions::concurrent::Extensions;
@@ -34,6 +35,7 @@ where
                 config_builder: ConfigBuilder::default(),
                 module_map: Default::default(),
                 executor: executor.into(),
+                plugins: Default::default(),
             },
         }
     }
@@ -156,6 +158,7 @@ pub struct Setup<C> {
     config_builder: ConfigBuilder,
     module_map: HashSet<TypeId>,
     executor: AnyExecutor,
+    plugins: PluginsList<C>,
 }
 
 impl<C: Context> Phase for Setup<C> {
@@ -181,6 +184,7 @@ impl<C: Context> Phase for Setup<C> {
                     extensions: &mut extensions,
                     extra_modules: &mut modules,
                     module_map: &mut self.module_map,
+                    plugins: &mut self.plugins,
                 })?;
 
                 #[cfg(feature = "cli")]
@@ -213,6 +217,7 @@ impl<C: Context> Phase for Setup<C> {
                     extensions: &mut extensions,
                     extra_modules: &mut modules,
                     module_map: &mut self.module_map,
+                    plugins: &mut self.plugins,
                 })?;
 
                 #[cfg(feature = "cli")]
@@ -250,6 +255,7 @@ impl<C: Context> Phase for Setup<C> {
                 skip_on_missing_config: self.skip_on_missing_config,
                 root: self.root,
                 executor: self.executor,
+                plugins: self.plugins,
             })
         }
     }
@@ -263,6 +269,7 @@ pub struct SetupCtx<'a, C> {
     cmds: &'a mut Option<Cmd<C>>,
     extensions: &'a mut Extensions,
     module_map: &'a mut HashSet<TypeId>,
+    plugins: &'a mut PluginsList<C>,
     extra_modules: &'a mut Vec<Box<dyn DynamicModule<C>>>,
 }
 
@@ -296,5 +303,16 @@ impl<'a, C: Context> SetupCtx<'a, C> {
             self.module_map.insert(TypeId::of::<T>());
         }
         self
+    }
+
+    pub fn register_plugin<T>(&mut self, plugin: T) -> Result<&mut Self, Error>
+    where
+        T: 'static + Plugin<C> + Send + Sync,
+        T::Output: Send + Sync + 'static,
+        T::Error: 'static,
+    {
+        self.plugins.insert(plugin)?;
+
+        Ok(self)
     }
 }

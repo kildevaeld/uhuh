@@ -4,8 +4,8 @@ use std::marker::PhantomData;
 use crate::{context::Context, Error};
 
 pub struct Cmd<C> {
-    pub(super) cmd: clap::Command,
-    pub(super) action: Box<dyn CmdAction<C, Future = LocalBoxFuture<'static, Result<(), Error>>>>,
+    pub(crate) cmd: clap::Command,
+    pub(crate) action: Box<dyn CmdAction<C, Future = LocalBoxFuture<'static, Result<(), Error>>>>,
 }
 
 pub trait CmdAction<C: Context> {

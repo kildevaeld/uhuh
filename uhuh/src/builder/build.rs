@@ -4,7 +4,9 @@ use futures_core::Future;
 use std::path::{Path, PathBuf};
 use tracing::debug;
 
-use crate::{context::Context, module::DynamicModule, Error, Initializer, Mode};
+use crate::{
+    context::Context, module::DynamicModule, plugin::PluginsList, Error, Initializer, Mode, Plugin,
+};
 
 use super::{config::ConfigBuilder, Builder, Init, Phase};
 
@@ -119,6 +121,7 @@ pub struct Build<C> {
     pub(super) skip_on_missing_config: bool,
     pub(super) root: Option<PathBuf>,
     pub(super) executor: AnyExecutor,
+    pub(super) plugins: PluginsList<C>,
 }
 
 impl<C: Context> Phase for Build<C> {
@@ -158,11 +161,14 @@ impl<C: Context> Phase for Build<C> {
                             extensions: &mut self.extensions,
                             mode: &self.mode,
                             root: &*root,
+                            plugins: &mut self.plugins,
                         },
                         cfg.clone(),
                     )
                     .await?;
             }
+
+            self.plugins.build(&mut self.extensions).await?;
 
             Ok(Init {
                 ctx: self.ctx,
@@ -184,6 +190,7 @@ pub struct BuildCtx<'a, C> {
     extensions: &'a mut Extensions,
     mode: &'a Mode,
     root: &'a Path,
+    plugins: &'a mut PluginsList<C>,
 }
 
 impl<'a, C> BuildCtx<'a, C> {
@@ -211,6 +218,15 @@ impl<'a, C> BuildCtx<'a, C> {
 
     pub fn get_mut<T: Send + Sync + 'static>(&mut self) -> Option<&mut T> {
         self.extensions.get_mut::<T>()
+    }
+
+    pub fn plugin<T>(&mut self) -> Result<&mut T, Error>
+    where
+        T: 'static + Plugin<C> + Send + Sync,
+        T::Output: Send + Sync + 'static,
+        T::Error: 'static,
+    {
+        self.plugins.get_mut()
     }
 }
 
