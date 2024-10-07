@@ -5,9 +5,14 @@ edition = "2021"
 
 [dependencies]
 uhuh-ext = { path = "../uhuh-ext" }
+uhuh-exp = { path = "../uhuh-exp" }
 
 axum = { version = "0.7" }
 tower = { version = "0.5" }
 
 tracing = { version = "0.1" }
 futures-core = { version = "0.3" }
+
+
+[dev-dependencies]
+tokio = { version = "1", features = ["net", "rt", "macros"] }

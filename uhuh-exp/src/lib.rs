@@ -3,17 +3,19 @@
 extern crate alloc;
 
 mod builder;
-mod config;
+// mod config;
 mod context;
 mod error;
 mod module;
 // mod plugin;
-mod extensions;
+pub mod extensions;
 mod types;
 
+pub use self::types::Config;
+
 pub use self::{
-    builder::Builder,
-    config::Config,
+    builder::{Build, Builder, Init, Setup},
+    // config::Config,
     context::*,
     error::*,
     module::{DynamicModule, Module},

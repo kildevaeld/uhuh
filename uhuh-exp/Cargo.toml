@@ -5,6 +5,7 @@ edition = "2021"
 
 
 [dependencies]
+uhuh-ext = { path = "../uhuh-ext" }
 serde = { version = "1", default-features = false, features = ["alloc"] }
 vaerdi = { git = "https://github.com/kildevaeld/vaerdi-rs", default-features = false, features = [
     "serde",

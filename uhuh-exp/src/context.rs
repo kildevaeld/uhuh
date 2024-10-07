@@ -2,12 +2,14 @@ use core::future::Future;
 
 use alloc::boxed::Box;
 
-use crate::{error::UhuhError, module::DynamicModule, Config};
+use crate::{error::UhuhError, module::DynamicModule, types::Config};
 
-pub trait BuildContext {
+pub trait BuildContext: Sized {
     type Setup<'a>;
     type Build<'a>;
     type Init<'a>;
+
+    type Config: Config;
 
     type Output;
 
@@ -19,7 +21,7 @@ pub trait BuildContext {
     fn run_build<'a>(
         &'a mut self,
         module: &'a [Box<dyn DynamicModule<Self>>],
-        config: &'a Config,
+        // config: &'a Config,
     ) -> impl Future<Output = Result<(), UhuhError>> + 'a;
 
     fn run_init<'a>(

@@ -1,0 +1,8 @@
+[package]
+name = "uhuh-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+uhuh-exp = { path = "../uhuh-exp" }
+clap = { version = "4", default-features = false }

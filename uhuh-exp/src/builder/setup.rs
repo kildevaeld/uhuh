@@ -5,8 +5,9 @@ use super::{build::Build, phase::Phase, Builder};
 use crate::{
     context::BuildContext,
     error::UhuhError,
+    extensions::{InitContext, Initializer, Plugin, PluginSetupContext},
     module::{box_module, DynamicModule},
-    Config, Module,
+    Module,
 };
 
 impl<C: BuildContext + 'static> Builder<Setup<C>> {
@@ -16,7 +17,6 @@ impl<C: BuildContext + 'static> Builder<Setup<C>> {
                 context,
                 modules: Default::default(),
                 module_map: Default::default(),
-                config: Config::default(),
             },
         }
     }
@@ -26,6 +26,10 @@ impl<C: BuildContext + 'static> Builder<Setup<C>> {
         self
     }
 
+    pub async fn build(self) -> Result<C::Output, UhuhError> {
+        self.setup().await?.build().await?.init().await
+    }
+
     pub async fn setup(self) -> Result<Builder<Build<C>>, UhuhError> {
         Ok(Builder {
             phase: self.phase.next().await?,
@@ -33,11 +37,31 @@ impl<C: BuildContext + 'static> Builder<Setup<C>> {
     }
 }
 
+impl<C: BuildContext> Builder<Setup<C>> {
+    pub fn initializer<T>(mut self, init: T) -> Self
+    where
+        T: Initializer<C> + 'static,
+        C: InitContext<C> + 'static,
+    {
+        self.phase.context.initializer(init);
+        self
+    }
+
+    pub fn plugin<T>(mut self, init: T) -> Result<Self, UhuhError>
+    where
+        T: Plugin<C> + Send + Sync + 'static,
+        T::Output: Send + Sync,
+        C: PluginSetupContext<C> + 'static,
+    {
+        self.phase.context.plugin(init)?;
+        Ok(self)
+    }
+}
+
 pub struct Setup<C> {
     context: C,
     modules: Vec<Box<dyn DynamicModule<C>>>,
     module_map: BTreeSet<TypeId>,
-    config: Config,
 }
 
 impl<C: BuildContext + 'static> Setup<C> {
@@ -63,7 +87,6 @@ where
             let next = Build {
                 context: self.context,
                 modules: self.modules,
-                config: self.config,
             };
 
             Ok(next)

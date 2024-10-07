@@ -4,7 +4,10 @@ use vaerdi::Value;
 
 use super::error::BoxError;
 use crate::{
-    context::BuildContext, error::UhuhError, types::BoxLocalFuture, Config, ResultContext,
+    context::BuildContext,
+    error::UhuhError,
+    types::{BoxLocalFuture, Config},
+    ResultContext,
 };
 
 #[allow(unused)]
@@ -45,7 +48,7 @@ pub trait DynamicModule<C: BuildContext> {
     fn build<'a>(
         &'a self,
         ctx: C::Build<'a>,
-        config: &'a Config,
+        config: &'a C::Config,
     ) -> Pin<Box<dyn Future<Output = Result<(), UhuhError>> + 'a>>;
 
     fn init<'a>(
@@ -81,7 +84,7 @@ where
     fn build<'a>(
         &'a self,
         ctx: C::Build<'a>,
-        config: &'a Config,
+        config: &'a C::Config,
     ) -> BoxLocalFuture<'a, Result<(), UhuhError>> {
         Box::pin(async move {
             let cfg = if config.contains(self.config_section()) {

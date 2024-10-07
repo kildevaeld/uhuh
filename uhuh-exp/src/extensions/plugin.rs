@@ -5,17 +5,24 @@ use core::{
 
 use alloc::{boxed::Box, collections::btree_map::BTreeMap, format};
 use daserror::BoxError;
+use uhuh_ext::Context as _;
 
-use crate::{types::BoxFuture, BuildContext, UhuhError};
+use crate::{types::BoxLocalFuture, BuildContext, UhuhError};
 
-pub trait Plugin<C> {
+pub trait Plugin<C: BuildContext> {
     type Output;
     type Error: Into<BoxError<'static>>;
-    fn build(self) -> impl Future<Output = Result<Self::Output, Self::Error>> + Send;
+    fn build(
+        self,
+        ctx: &mut C::Build<'_>,
+    ) -> impl Future<Output = Result<Self::Output, Self::Error>> + Send;
 }
 
-pub(crate) trait DynamicPlugin<C> {
-    fn build<'a>(self: Box<Self>, context: &'a mut C) -> BoxFuture<'a, Result<(), UhuhError>>;
+pub(crate) trait DynamicPlugin<C: BuildContext> {
+    fn build<'a, 'b>(
+        self: Box<Self>,
+        context: &'a mut C::Build<'b>,
+    ) -> BoxLocalFuture<'a, Result<(), UhuhError>>;
 
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
@@ -27,15 +34,24 @@ pub(crate) struct PluginBox<T> {
 
 impl<T, C> DynamicPlugin<C> for PluginBox<T>
 where
-    C: BuildContext,
+    C: BuildContext + 'static,
+    for<'a> C::Build<'a>: uhuh_ext::Context,
     T: 'static + Plugin<C> + Send,
     T::Output: Send + Sync + 'static,
     T::Error: 'static,
 {
-    fn build<'a>(self: Box<Self>, context: &'a mut C) -> BoxFuture<'a, Result<(), UhuhError>> {
+    fn build<'a, 'b>(
+        self: Box<Self>,
+        mut context: &'a mut C::Build<'b>,
+    ) -> BoxLocalFuture<'a, Result<(), UhuhError>> {
         Box::pin(async move {
-            let ret = self.inner.build().await.map_err(UhuhError::new)?;
-            extensions.insert(ret);
+            let ret = self
+                .inner
+                .build(&mut context)
+                .await
+                .map_err(UhuhError::new)?;
+
+            context.register(ret);
             Ok(())
         })
     }
@@ -49,13 +65,15 @@ where
     }
 }
 
-pub type BoxPlugin<C> = Box<dyn DynamicPlugin<C> + Send + Sync>;
+pub(crate) type BoxPlugin<C> = Box<dyn DynamicPlugin<C> + Send + Sync>;
 
-pub fn plugin_box<T, C>(extension: T) -> BoxPlugin<C>
+pub(crate) fn plugin_box<T, C>(extension: T) -> BoxPlugin<C>
 where
     T: 'static + Plugin<C> + Send + Sync,
     T::Output: Send + Sync + 'static,
     T::Error: 'static,
+    C: BuildContext + 'static,
+    for<'a> C::Build<'a>: uhuh_ext::Context,
 {
     Box::new(PluginBox { inner: extension })
 }
@@ -71,7 +89,11 @@ impl<C> Default for PluginsList<C> {
         }
     }
 }
-impl<C> PluginsList<C> {
+impl<C: BuildContext> PluginsList<C>
+where
+    C: 'static,
+    for<'a> C::Build<'a>: uhuh_ext::Context,
+{
     pub fn insert<T>(&mut self, plugin: T) -> Result<(), UhuhError>
     where
         T: 'static + Plugin<C> + Send + Sync,
@@ -125,10 +147,27 @@ impl<C> PluginsList<C> {
             .ok_or_else(|| UhuhError::new("Plugin not registered"))
     }
 
-    pub async fn build<'a>(self, context: &mut C) -> Result<(), UhuhError> {
+    pub async fn build<'a>(self, mut context: C::Build<'a>) -> Result<(), UhuhError> {
         for plugin in self.plugins.into_values() {
-            plugin.build(context).await?;
+            plugin.build(&mut context).await?;
         }
         Ok(())
     }
+}
+
+pub trait PluginSetupContext<C: BuildContext> {
+    fn plugin<T>(&mut self, plugin: T) -> Result<(), UhuhError>
+    where
+        T: 'static + Plugin<C> + Send + Sync,
+        T::Output: Send + Sync + 'static,
+        T::Error: 'static,
+        C: 'static;
+}
+
+pub trait PluginBuildContext<C: BuildContext> {
+    fn configure_plugin<T>(&mut self) -> Result<&mut T, UhuhError>
+    where
+        T: 'static + Plugin<C> + Send + Sync,
+        T::Output: Send + Sync + 'static,
+        T::Error: 'static;
 }
