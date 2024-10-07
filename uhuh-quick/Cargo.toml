@@ -1,0 +1,8 @@
+[package]
+name = "uhuh-quick"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+klaver = { git = "https://github.com/fairy-render/klaver", features = ["pool"] }
+uhuh = { path = "../uhuh" }
