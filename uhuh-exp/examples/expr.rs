@@ -29,32 +29,39 @@ impl BuildContext for Context {
 
     fn run_setup<'a>(
         &'a mut self,
-        module: &'a dyn DynamicModule<Self>,
+        modules: &'a [Box<dyn DynamicModule<Self>>],
     ) -> impl std::future::Future<Output = Result<(), uhuh_exp::UhuhError>> + 'a {
-        async move { module.setup(()).await }
+        async move {
+            for module in modules {
+                module.setup(()).await?;
+            }
+            Ok(())
+        }
     }
 
     fn run_build<'a>(
         &'a mut self,
-        module: &'a dyn DynamicModule<Self>,
+        modules: &'a [Box<dyn DynamicModule<Self>>],
         config: &'a Config,
     ) -> impl std::future::Future<Output = Result<(), uhuh_exp::UhuhError>> + 'a {
         async move {
-            let value = config.get("name").cloned();
-            module
-                .build(
-                    BuildCtx {
-                        extensions: &mut self.ext,
-                    },
-                    value,
-                )
-                .await
+            for module in modules {
+                module
+                    .build(
+                        BuildCtx {
+                            extensions: &mut self.ext,
+                        },
+                        config,
+                    )
+                    .await?;
+            }
+            Ok(())
         }
     }
 
     fn run_init<'a>(
         &'a mut self,
-        module: &'a dyn DynamicModule<Self>,
+        _module: &'a [Box<dyn DynamicModule<Self>>],
     ) -> impl std::future::Future<Output = Result<(), uhuh_exp::UhuhError>> + 'a {
         async move { Ok(()) }
     }
@@ -77,7 +84,7 @@ where
     type Error = UhuhError;
 
     fn setup(
-        ctx: <C as BuildContext>::Setup<'_>,
+        _ctx: <C as BuildContext>::Setup<'_>,
     ) -> impl std::future::Future<Output = Result<(), Self::Error>> {
         async move {
             println!("Setup");
@@ -87,7 +94,7 @@ where
 
     fn build(
         mut ctx: <C as BuildContext>::Build<'_>,
-        config: Option<Self::Config>,
+        _config: Option<Self::Config>,
     ) -> impl std::future::Future<Output = Result<(), Self::Error>> {
         async move {
             println!("Build");

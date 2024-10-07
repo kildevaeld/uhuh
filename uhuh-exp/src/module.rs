@@ -3,7 +3,9 @@ use core::{future::Future, marker::PhantomData, pin::Pin};
 use vaerdi::Value;
 
 use super::error::BoxError;
-use crate::{context::BuildContext, error::UhuhError, ResultContext};
+use crate::{
+    context::BuildContext, error::UhuhError, types::BoxLocalFuture, Config, ResultContext,
+};
 
 #[allow(unused)]
 pub trait Module<C: BuildContext> {
@@ -43,7 +45,7 @@ pub trait DynamicModule<C: BuildContext> {
     fn build<'a>(
         &'a self,
         ctx: C::Build<'a>,
-        config: Option<Value>,
+        config: &'a Config,
     ) -> Pin<Box<dyn Future<Output = Result<(), UhuhError>> + 'a>>;
 
     fn init<'a>(
@@ -72,25 +74,23 @@ where
         T::default_config().and_then(|m| vaerdi::ser::to_value(m).ok())
     }
 
-    fn setup<'a>(
-        &'a self,
-        core: C::Setup<'a>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), UhuhError>> + 'a>> {
+    fn setup<'a>(&'a self, core: C::Setup<'a>) -> BoxLocalFuture<'a, Result<(), UhuhError>> {
         Box::pin(async move { T::setup(core).await.map_err(UhuhError::new) })
     }
 
     fn build<'a>(
         &'a self,
         ctx: C::Build<'a>,
-        value: Option<Value>,
-    ) -> Pin<Box<dyn Future<Output = Result<(), UhuhError>> + 'a>> {
+        config: &'a Config,
+    ) -> BoxLocalFuture<'a, Result<(), UhuhError>> {
         Box::pin(async move {
-            let cfg = if let Some(cfg) = value {
-                let cfg = vaerdi::de::from_value::<T::Config>(cfg)
-                    .map_err(UhuhError::new)
-                    .with_context("Could not unmarshal config")?;
-
-                Some(cfg)
+            let cfg = if config.contains(self.config_section()) {
+                Some(
+                    config
+                        .try_get(T::CONFIG_SECTION)
+                        .map_err(UhuhError::new)
+                        .with_context("Could not unmarshal config")?,
+                )
             } else {
                 None
             };

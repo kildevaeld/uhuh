@@ -58,9 +58,7 @@ where
 
     fn next(mut self) -> impl Future<Output = Result<Self::Next, UhuhError>> {
         async move {
-            for module in &self.modules {
-                self.context.run_setup(&**module).await?;
-            }
+            self.context.run_setup(&self.modules).await?;
 
             let next = Build {
                 context: self.context,

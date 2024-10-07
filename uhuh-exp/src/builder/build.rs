@@ -22,9 +22,7 @@ impl<C: BuildContext> Phase for Build<C> {
 
     fn next(mut self) -> impl Future<Output = Result<Self::Next, UhuhError>> {
         async move {
-            for module in &self.modules {
-                self.context.run_build(&**module, &self.config).await?;
-            }
+            self.context.run_build(&self.modules, &self.config).await?;
 
             let next = Init {
                 context: self.context,

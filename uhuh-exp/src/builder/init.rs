@@ -2,9 +2,8 @@ use core::future::Future;
 
 use alloc::{boxed::Box, vec::Vec};
 
-use crate::{context::BuildContext, error::UhuhError, module::DynamicModule};
-
 use super::{phase::Phase, Builder};
+use crate::{context::BuildContext, error::UhuhError, module::DynamicModule};
 
 impl<C: BuildContext> Builder<Init<C>> {
     pub async fn init(self) -> Result<C::Output, UhuhError> {
@@ -22,10 +21,7 @@ impl<C: BuildContext> Phase for Init<C> {
 
     fn next(mut self) -> impl Future<Output = Result<Self::Next, UhuhError>> {
         async move {
-            for module in &self.modules {
-                self.context.run_init(&**module).await?;
-            }
-
+            self.context.run_init(&self.modules).await?;
             self.context.build().await
         }
     }

@@ -7,7 +7,8 @@ mod config;
 mod context;
 mod error;
 mod module;
-mod plugin;
+// mod plugin;
+mod extensions;
 mod types;
 
 pub use self::{
