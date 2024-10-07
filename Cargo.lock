@@ -536,6 +536,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "daserror"
+version = "0.1.0"
+dependencies = [
+ "rustc_version",
+]
+
+[[package]]
 name = "deadpool"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2031,6 +2038,17 @@ dependencies = [
  "tower",
  "tracing",
  "uhuh-ext",
+]
+
+[[package]]
+name = "uhuh-exp"
+version = "0.1.0"
+dependencies = [
+ "daserror",
+ "futures",
+ "serde",
+ "uhuh-ext",
+ "vaerdi",
 ]
 
 [[package]]

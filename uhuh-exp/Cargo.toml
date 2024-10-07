@@ -1,0 +1,16 @@
+[package]
+name = "uhuh-exp"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+serde = { version = "1", default-features = false, features = ["alloc"] }
+vaerdi = { git = "https://github.com/kildevaeld/vaerdi-rs", default-features = false, features = [
+    "serde",
+] }
+daserror = { path = "../daserror", features = ["alloc"] }
+
+[dev-dependencies]
+futures = { version = "0.3" }
+uhuh-ext = { path = "../uhuh-ext" }

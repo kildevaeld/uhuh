@@ -4,6 +4,7 @@ use alloc::{boxed::Box, vec::Vec};
 
 pub trait Context {
     fn get<T: 'static + Send + Sync>(&self) -> Option<&T>;
+    fn register<T: 'static + Send + Sync>(&mut self, value: T) -> Option<T>;
 }
 
 pub trait ContextBuilder {
