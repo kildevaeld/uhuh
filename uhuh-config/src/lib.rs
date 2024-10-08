@@ -7,8 +7,11 @@ pub trait ConfigResolver<T> {
     fn build(self) -> Result<T, Self::Error>;
 }
 
-pub trait Configure<C> {
-    fn configure(self, resolver: &mut C) -> Result<(), UhuhError>;
+pub trait Configure<C, T>
+where
+    C: ConfigResolver<T>,
+{
+    fn configure(self: Box<Self>, resolver: &mut C) -> Result<(), UhuhError>;
 }
 
 pub trait ConfigBuildContext<C>: BuildContext
@@ -17,7 +20,7 @@ where
 {
     fn configure<F>(&mut self, func: F)
     where
-        F: Configure<C> + 'static;
+        F: Configure<C, Self::Config> + 'static;
 }
 
 pub struct ConfigBuilder<C, T>
@@ -26,7 +29,7 @@ where
     T: ConfigResolver<C::Config>,
 {
     resolver: T,
-    funcs: Vec<Box<dyn Configure<T>>>,
+    funcs: Vec<Box<dyn Configure<T, C::Config>>>,
     _c: PhantomData<C>,
 }
 
@@ -51,10 +54,16 @@ where
 {
     pub fn configure<F>(&mut self, func: F)
     where
-        F: Configure<T> + 'static,
+        F: Configure<T, C::Config> + 'static,
     {
         self.funcs.push(Box::new(func));
     }
 
-    pub fn build(self) -> Result<C::Config, UhuhError> {}
+    pub fn build(mut self) -> Result<C::Config, UhuhError> {
+        for func in self.funcs {
+            func.configure(&mut self.resolver)?;
+        }
+
+        self.resolver.build().map_err(UhuhError::new)
+    }
 }
