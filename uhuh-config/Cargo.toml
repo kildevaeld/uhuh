@@ -5,3 +5,7 @@ edition = "2021"
 
 [dependencies]
 uhuh-exp = { path = "../uhuh-exp" }
+
+[dev-dependencies]
+uhuh-ext = { path = "../uhuh-ext" }
+futures = { version = "0.3" }

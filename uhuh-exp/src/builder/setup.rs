@@ -37,21 +37,27 @@ impl<C: BuildContext + 'static> Builder<Setup<C>> {
     }
 }
 
-impl<C: BuildContext> Builder<Setup<C>> {
+impl<C: BuildContext> Builder<Setup<C>>
+where
+    C: InitContext<C> + 'static,
+{
     pub fn initializer<T>(mut self, init: T) -> Self
     where
         T: Initializer<C> + 'static,
-        C: InitContext<C> + 'static,
     {
         self.phase.context.initializer(init);
         self
     }
+}
 
+impl<C: BuildContext> Builder<Setup<C>>
+where
+    C: PluginSetupContext<C> + 'static,
+{
     pub fn plugin<T>(mut self, init: T) -> Result<Self, UhuhError>
     where
         T: Plugin<C> + Send + Sync + 'static,
         T::Output: Send + Sync,
-        C: PluginSetupContext<C> + 'static,
     {
         self.phase.context.plugin(init)?;
         Ok(self)

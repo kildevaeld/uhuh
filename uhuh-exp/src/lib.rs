@@ -20,3 +20,5 @@ pub use self::{
     error::*,
     module::{DynamicModule, Module},
 };
+
+pub use serde;

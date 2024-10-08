@@ -2054,7 +2054,9 @@ dependencies = [
 name = "uhuh-config"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "uhuh-exp",
+ "uhuh-ext",
 ]
 
 [[package]]
