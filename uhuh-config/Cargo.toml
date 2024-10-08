@@ -3,9 +3,15 @@ name = "uhuh-config"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+std = []
+
 [dependencies]
 uhuh-exp = { path = "../uhuh-exp" }
 
 [dev-dependencies]
 uhuh-ext = { path = "../uhuh-ext" }
 futures = { version = "0.3" }
+vaerdi = { git = "https://github.com/kildevaeld/vaerdi-rs", features = [
+  "serde",
+] }

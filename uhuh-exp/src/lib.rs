@@ -11,10 +11,10 @@ mod module;
 pub mod extensions;
 mod types;
 
-pub use self::types::Config;
+pub use self::types::{Config, LocalBoxFuture};
 
 pub use self::{
-    builder::{Build, Builder, Init, Setup},
+    builder::{BuildPhase, Builder, InitPhase, Phase, SetupPhase},
     // config::Config,
     context::*,
     error::*,

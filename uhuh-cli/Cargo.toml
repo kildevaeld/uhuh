@@ -3,6 +3,18 @@ name = "uhuh-cli"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+config = []
+
 [dependencies]
+clap = { version = "4" }
 uhuh-exp = { path = "../uhuh-exp" }
-clap = { version = "4", default-features = false }
+uhuh-config = { path = "../uhuh-config", features = ["std"] }
+
+
+[dev-dependencies]
+uhuh-ext = { path = "../uhuh-ext" }
+futures = { version = "0.3" }
+vaerdi = { git = "https://github.com/kildevaeld/vaerdi-rs", features = [
+  "serde",
+] }

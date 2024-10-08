@@ -17,7 +17,7 @@ impl Config for Cfg {
         false
     }
 
-    fn try_get<'a, T: serde::Deserialize<'a>>(&'a self, key: &str) -> Result<T, Self::Error> {
+    fn try_get<'a, T: serde::de::DeserializeOwned>(&'a self, key: &str) -> Result<T, Self::Error> {
         todo!()
     }
 }

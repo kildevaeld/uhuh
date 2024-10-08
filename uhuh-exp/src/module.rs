@@ -6,7 +6,7 @@ use super::error::BoxError;
 use crate::{
     context::BuildContext,
     error::UhuhError,
-    types::{BoxLocalFuture, Config},
+    types::{Config, LocalBoxFuture},
     ResultContext,
 };
 
@@ -77,7 +77,7 @@ where
         T::default_config().and_then(|m| vaerdi::ser::to_value(m).ok())
     }
 
-    fn setup<'a>(&'a self, core: C::Setup<'a>) -> BoxLocalFuture<'a, Result<(), UhuhError>> {
+    fn setup<'a>(&'a self, core: C::Setup<'a>) -> LocalBoxFuture<'a, Result<(), UhuhError>> {
         Box::pin(async move { T::setup(core).await.map_err(UhuhError::new) })
     }
 
@@ -85,7 +85,7 @@ where
         &'a self,
         ctx: C::Build<'a>,
         config: &'a C::Config,
-    ) -> BoxLocalFuture<'a, Result<(), UhuhError>> {
+    ) -> LocalBoxFuture<'a, Result<(), UhuhError>> {
         Box::pin(async move {
             let cfg = if config.contains(self.config_section()) {
                 Some(

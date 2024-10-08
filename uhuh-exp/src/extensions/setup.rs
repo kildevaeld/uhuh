@@ -9,40 +9,40 @@ use uhuh_ext::Context as _;
 
 use crate::{types::LocalBoxFuture, BuildContext, UhuhError};
 
-pub trait Plugin<C: BuildContext> {
+pub trait Setup<C: BuildContext> {
     type Output;
     type Error: Into<BoxError<'static>>;
     fn build(
         self,
-        ctx: &mut C::Build<'_>,
+        ctx: &mut C::Setup<'_>,
     ) -> impl Future<Output = Result<Self::Output, Self::Error>> + Send;
 }
 
-pub(crate) trait DynamicPlugin<C: BuildContext> {
+pub(crate) trait DynamicSetup<C: BuildContext> {
     fn build<'a, 'b>(
         self: Box<Self>,
-        context: &'a mut C::Build<'b>,
+        context: &'a mut C::Setup<'b>,
     ) -> LocalBoxFuture<'a, Result<(), UhuhError>>;
 
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-pub(crate) struct PluginBox<T> {
+pub(crate) struct SetupBox<T> {
     inner: T,
 }
 
-impl<T, C> DynamicPlugin<C> for PluginBox<T>
+impl<T, C> DynamicSetup<C> for SetupBox<T>
 where
     C: BuildContext + 'static,
-    for<'a> C::Build<'a>: uhuh_ext::Context,
-    T: 'static + Plugin<C> + Send,
+    for<'a> C::Setup<'a>: uhuh_ext::Context,
+    T: 'static + Setup<C> + Send,
     T::Output: Send + Sync + 'static,
     T::Error: 'static,
 {
     fn build<'a, 'b>(
         self: Box<Self>,
-        mut context: &'a mut C::Build<'b>,
+        mut context: &'a mut C::Setup<'b>,
     ) -> LocalBoxFuture<'a, Result<(), UhuhError>> {
         Box::pin(async move {
             let ret = self
@@ -52,6 +52,7 @@ where
                 .map_err(UhuhError::new)?;
 
             context.register(ret);
+
             Ok(())
         })
     }
@@ -65,109 +66,110 @@ where
     }
 }
 
-pub(crate) type BoxPlugin<C> = Box<dyn DynamicPlugin<C> + Send + Sync>;
+pub(crate) type BoxSetup<C> = Box<dyn DynamicSetup<C> + Send + Sync>;
 
-pub(crate) fn plugin_box<T, C>(extension: T) -> BoxPlugin<C>
+pub(crate) fn setup_box<T, C>(extension: T) -> BoxSetup<C>
 where
-    T: 'static + Plugin<C> + Send + Sync,
+    T: 'static + Setup<C> + Send + Sync,
     T::Output: Send + Sync + 'static,
     T::Error: 'static,
     C: BuildContext + 'static,
-    for<'a> C::Build<'a>: uhuh_ext::Context,
+    for<'a> C::Setup<'a>: uhuh_ext::Context,
 {
-    Box::new(PluginBox { inner: extension })
+    Box::new(SetupBox { inner: extension })
 }
 
-pub struct PluginsList<C> {
-    plugins: BTreeMap<TypeId, BoxPlugin<C>>,
+pub struct SetupList<C> {
+    tree: BTreeMap<TypeId, BoxSetup<C>>,
 }
 
-impl<C> Default for PluginsList<C> {
+impl<C> Default for SetupList<C> {
     fn default() -> Self {
-        PluginsList {
-            plugins: Default::default(),
+        SetupList {
+            tree: Default::default(),
         }
     }
 }
-impl<C: BuildContext> PluginsList<C>
+
+impl<C: BuildContext> SetupList<C>
 where
     C: 'static,
-    for<'a> C::Build<'a>: uhuh_ext::Context,
+    for<'a> C::Setup<'a>: uhuh_ext::Context,
 {
-    pub fn insert<T>(&mut self, plugin: T) -> Result<(), UhuhError>
+    pub fn insert<T>(&mut self, Setup: T) -> Result<(), UhuhError>
     where
-        T: 'static + Plugin<C> + Send + Sync,
+        T: 'static + Setup<C> + Send + Sync,
         T::Output: Send + Sync + 'static,
         T::Error: 'static,
     {
         let id = TypeId::of::<T>();
-        if self.plugins.contains_key(&id) {
+        if self.tree.contains_key(&id) {
             return Err(UhuhError::new(format!(
-                "Plugin '{}' already defined",
+                "Setup '{}' already defined",
                 core::any::type_name::<T>()
             )));
         }
 
-        self.plugins.insert(id, plugin_box(plugin));
+        self.tree.insert(id, setup_box(Setup));
 
         Ok(())
     }
 
     pub fn get<T>(&self) -> Result<&T, UhuhError>
     where
-        T: 'static + Plugin<C> + Send + Sync,
+        T: 'static + Setup<C> + Send + Sync,
         T::Output: Send + Sync + 'static,
         T::Error: 'static,
     {
         let id = TypeId::of::<T>();
-        let Some(plugin) = self.plugins.get(&id) else {
-            return Err(UhuhError::new("Plugin not registered"));
+        let Some(setup) = self.tree.get(&id) else {
+            return Err(UhuhError::new("Setup not registered"));
         };
 
-        plugin
+        setup
             .as_any()
             .downcast_ref()
-            .ok_or_else(|| UhuhError::new("Plugin not registered"))
+            .ok_or_else(|| UhuhError::new("Setup not registered"))
     }
 
     pub fn get_mut<T>(&mut self) -> Result<&mut T, UhuhError>
     where
-        T: 'static + Plugin<C> + Send + Sync,
+        T: 'static + Setup<C> + Send + Sync,
         T::Output: Send + Sync + 'static,
         T::Error: 'static,
     {
         let id = TypeId::of::<T>();
-        let Some(plugin) = self.plugins.get_mut(&id) else {
-            return Err(UhuhError::new("Plugin not registered"));
+        let Some(setup) = self.tree.get_mut(&id) else {
+            return Err(UhuhError::new("Setup not registered"));
         };
 
-        plugin
+        setup
             .as_any_mut()
             .downcast_mut()
-            .ok_or_else(|| UhuhError::new("Plugin not registered"))
+            .ok_or_else(|| UhuhError::new("Setup not registered"))
     }
 
-    pub async fn build<'a>(self, mut context: C::Build<'a>) -> Result<(), UhuhError> {
-        for plugin in self.plugins.into_values() {
-            plugin.build(&mut context).await?;
+    pub async fn build<'a>(self, mut context: C::Setup<'a>) -> Result<(), UhuhError> {
+        for setup in self.tree.into_values() {
+            setup.build(&mut context).await?;
         }
         Ok(())
     }
 }
 
-pub trait PluginSetupContext<C: BuildContext> {
-    fn plugin<T>(&mut self, plugin: T) -> Result<(), UhuhError>
+pub trait SetupBuildContext<C: BuildContext> {
+    fn register_constant<T>(&mut self, setup: T) -> Result<(), UhuhError>
     where
-        T: 'static + Plugin<C> + Send + Sync,
+        T: 'static + Setup<C> + Send + Sync,
         T::Output: Send + Sync + 'static,
         T::Error: 'static,
         C: 'static;
 }
 
-pub trait PluginBuildContext<C: BuildContext> {
-    fn configure_plugin<T>(&mut self) -> Result<&mut T, UhuhError>
-    where
-        T: 'static + Plugin<C> + Send + Sync,
-        T::Output: Send + Sync + 'static,
-        T::Error: 'static;
-}
+// pub trait SetupBuildContext<C: BuildContext> {
+//     fn constant<T>(&mut self) -> Result<&mut T, UhuhError>
+//     where
+//         T: 'static + Setup<C> + Send + Sync,
+//         T::Output: Send + Sync + 'static,
+//         T::Error: 'static;
+// }

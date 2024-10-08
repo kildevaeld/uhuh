@@ -1,23 +1,24 @@
 use alloc::{boxed::Box, collections::btree_set::BTreeSet, vec::Vec};
-use core::{any::TypeId, future::Future};
+use core::{any::TypeId, future::Future, marker::PhantomData};
 
-use super::{build::Build, phase::Phase, Builder};
+use super::{build::BuildPhase, phase::Phase, Builder};
 use crate::{
     context::BuildContext,
     error::UhuhError,
-    extensions::{InitContext, Initializer, Plugin, PluginSetupContext},
+    extensions::{InitContext, Initializer, Plugin, PluginSetupContext, Setup, SetupBuildContext},
     module::{box_module, DynamicModule},
     Module,
 };
 
-impl<C: BuildContext + 'static> Builder<Setup<C>> {
-    pub fn new(context: C) -> Builder<Setup<C>> {
+impl<C: BuildContext + 'static> Builder<SetupPhase<C>, C> {
+    pub fn new(context: C) -> Builder<SetupPhase<C>, C> {
         Self {
-            phase: Setup {
+            phase: SetupPhase {
                 context,
                 modules: Default::default(),
                 module_map: Default::default(),
             },
+            _c: PhantomData,
         }
     }
 
@@ -30,14 +31,15 @@ impl<C: BuildContext + 'static> Builder<Setup<C>> {
         self.setup().await?.build().await?.init().await
     }
 
-    pub async fn setup(self) -> Result<Builder<Build<C>>, UhuhError> {
+    pub async fn setup(self) -> Result<Builder<BuildPhase<C>, C>, UhuhError> {
         Ok(Builder {
             phase: self.phase.next().await?,
+            _c: PhantomData,
         })
     }
 }
 
-impl<C: BuildContext> Builder<Setup<C>>
+impl<C: BuildContext> Builder<SetupPhase<C>, C>
 where
     C: InitContext<C> + 'static,
 {
@@ -50,7 +52,7 @@ where
     }
 }
 
-impl<C: BuildContext> Builder<Setup<C>>
+impl<C: BuildContext> Builder<SetupPhase<C>, C>
 where
     C: PluginSetupContext<C> + 'static,
 {
@@ -64,13 +66,27 @@ where
     }
 }
 
-pub struct Setup<C> {
+impl<C: BuildContext> Builder<SetupPhase<C>, C>
+where
+    C: SetupBuildContext<C> + 'static,
+{
+    pub fn constant<T>(mut self, init: T) -> Result<Self, UhuhError>
+    where
+        T: Setup<C> + Send + Sync + 'static,
+        T::Output: Send + Sync,
+    {
+        self.phase.context.register_constant(init)?;
+        Ok(self)
+    }
+}
+
+pub struct SetupPhase<C> {
     context: C,
     modules: Vec<Box<dyn DynamicModule<C>>>,
     module_map: BTreeSet<TypeId>,
 }
 
-impl<C: BuildContext + 'static> Setup<C> {
+impl<C: BuildContext + 'static> SetupPhase<C> {
     pub fn add_module<T: Module<C> + 'static>(&mut self) -> &mut Self {
         if !self.module_map.contains(&TypeId::of::<T>()) {
             self.modules.push(box_module::<T, C>());
@@ -80,22 +96,26 @@ impl<C: BuildContext + 'static> Setup<C> {
     }
 }
 
-impl<C> Phase for Setup<C>
+impl<C> Phase<C> for SetupPhase<C>
 where
     C: BuildContext,
 {
-    type Next = Build<C>;
+    type Next = BuildPhase<C>;
 
     fn next(mut self) -> impl Future<Output = Result<Self::Next, UhuhError>> {
         async move {
             self.context.run_setup(&self.modules).await?;
 
-            let next = Build {
+            let next = BuildPhase {
                 context: self.context,
                 modules: self.modules,
             };
 
             Ok(next)
         }
+    }
+
+    fn context(&mut self) -> &mut C {
+        &mut self.context
     }
 }

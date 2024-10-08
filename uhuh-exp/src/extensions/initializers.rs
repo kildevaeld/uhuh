@@ -3,7 +3,7 @@ use core::future::Future;
 use alloc::{boxed::Box, vec::Vec};
 use daserror::BoxError;
 
-use crate::{types::BoxLocalFuture, BuildContext, UhuhError};
+use crate::{types::LocalBoxFuture, BuildContext, UhuhError};
 
 pub trait Initializer<C: BuildContext> {
     type Error: Into<BoxError<'static>>;
@@ -31,7 +31,7 @@ trait DynamicInit<C: BuildContext> {
     fn init<'a, 'b>(
         self: Box<Self>,
         ctx: &'a mut C::Init<'b>,
-    ) -> BoxLocalFuture<'a, Result<(), UhuhError>>;
+    ) -> LocalBoxFuture<'a, Result<(), UhuhError>>;
 }
 
 pub struct InitList<C: BuildContext> {
@@ -62,7 +62,7 @@ impl<C: BuildContext> InitList<C> {
             fn init<'a, 'b>(
                 self: Box<Self>,
                 ctx: &'a mut <C as BuildContext>::Init<'b>,
-            ) -> BoxLocalFuture<'a, Result<(), UhuhError>> {
+            ) -> LocalBoxFuture<'a, Result<(), UhuhError>> {
                 Box::pin(async move {
                     //
                     self.0.init(ctx).await.map_err(UhuhError::new)

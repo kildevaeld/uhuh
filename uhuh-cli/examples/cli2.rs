@@ -1,6 +1,7 @@
-use uhuh_config::{BuilderExt, ConfigBuildContext, ConfigBuilder, SimpleResolver};
+use uhuh_cli::{BuilderExt, Cli, CliBuildContext, CliBuilder, CliSetupContext};
 use uhuh_exp::{
-    extensions::PluginsList, serde, BuildContext, Builder, Config, DynamicModule, Module, UhuhError,
+    extensions::{PluginsList, SetupBuildContext, SetupList},
+    serde, BuildContext, Builder, Config, DynamicModule, Module, UhuhError,
 };
 use uhuh_ext::Extensions;
 use vaerdi::{Map, Value};
@@ -32,16 +33,46 @@ impl Config for Cfg {
 pub struct Context {
     ext: Extensions,
     plugins: PluginsList<Self>,
-    config_builder: ConfigBuilder<Self, SimpleResolver<Cfg>>,
-    cfg: Option<Cfg>,
+    cmds: CliBuilder<Self>,
+    setup: SetupList<Self>,
+    cfg: Cfg,
 }
 
-impl ConfigBuildContext<SimpleResolver<Cfg>> for Context {
-    fn configure<F>(&mut self, func: F)
+impl CliBuildContext for Context {
+    fn register_command<T: uhuh_cli::Cli<Self> + 'static>(&mut self, cli: T) {
+        todo!()
+    }
+}
+
+impl SetupBuildContext<Context> for Context {
+    fn register_constant<T>(&mut self, setup: T) -> Result<(), UhuhError>
     where
-        F: uhuh_config::Configure<SimpleResolver<Cfg>, Self::Config> + 'static,
+        T: 'static + uhuh_exp::extensions::Setup<Context> + Send + Sync,
+        T::Output: Send + Sync + 'static,
+        T::Error: 'static,
+        Context: 'static,
     {
-        self.config_builder.configure(func);
+        self.setup.insert(setup)
+    }
+}
+
+pub struct SetupCtx<'a> {
+    cmds: &'a mut CliBuilder<Context>,
+    setup: &'a mut SetupList<Context>,
+    ext: &'a mut Extensions,
+}
+
+impl<'a> CliSetupContext<Context> for SetupCtx<'a> {
+    fn register_command<T: uhuh_cli::Cli<Context> + 'static>(&mut self, cli: T) {}
+}
+
+impl<'a> uhuh_ext::Context for SetupCtx<'a> {
+    fn get<T: 'static + Send + Sync>(&self) -> Option<&T> {
+        self.ext.get()
+    }
+
+    fn register<T: 'static + Send + Sync>(&mut self, value: T) -> Option<T> {
+        self.ext.insert(value)
     }
 }
 
@@ -52,7 +83,7 @@ pub struct BuildCtx<'a> {
 
 impl BuildContext for Context {
     type Build<'a> = BuildCtx<'a>;
-    type Setup<'a> = ();
+    type Setup<'a> = SetupCtx<'a>;
     type Init<'a> = ();
     type Output = Extensions;
 
@@ -64,7 +95,13 @@ impl BuildContext for Context {
     ) -> impl std::future::Future<Output = Result<(), uhuh_exp::UhuhError>> + 'a {
         async move {
             for module in modules {
-                module.setup(()).await?;
+                module
+                    .setup(SetupCtx {
+                        cmds: &mut self.cmds,
+                        setup: &mut self.setup,
+                        ext: &mut self.ext,
+                    })
+                    .await?;
             }
             Ok(())
         }
@@ -75,10 +112,6 @@ impl BuildContext for Context {
         modules: &'a [Box<dyn DynamicModule<Self>>],
     ) -> impl std::future::Future<Output = Result<(), uhuh_exp::UhuhError>> + 'a {
         async move {
-            let config_resolver = core::mem::take(&mut self.config_builder);
-
-            let config = config_resolver.build()?;
-
             for module in modules {
                 module
                     .build(
@@ -86,12 +119,10 @@ impl BuildContext for Context {
                             extensions: &mut self.ext,
                             plugins: &mut self.plugins,
                         },
-                        &config,
+                        &self.cfg,
                     )
                     .await?;
             }
-
-            self.cfg = Some(config);
 
             Ok(())
         }
@@ -139,26 +170,32 @@ impl<C: BuildContext> Module<C> for TestModule {
     }
 }
 
+pub struct App;
+
+impl Cli<Context> for App {
+    fn create_command(&self) -> clap::Command {
+        clap::Command::new("App")
+    }
+
+    fn run(
+        self,
+        ctx: Extensions,
+        args: &clap::ArgAction,
+    ) -> impl futures::Future<Output = Result<(), UhuhError>> {
+        async move {
+            println!("Worm");
+            Ok(())
+        }
+    }
+}
+
 fn main() {
     futures::executor::block_on(wrapped_main()).unwrap()
 }
 
 async fn wrapped_main() -> Result<(), uhuh_exp::UhuhError> {
-    let builder = Builder::new(Context::default())
-        .configure(|resolver: &mut SimpleResolver<Cfg>| {
-            //
-            resolver.get_mut().name.insert("test", "Hello, World!");
-            Ok(())
-        })
+    Builder::new(Context::default())
         .module::<TestModule>()
-        .build()
-        .await?;
-
-    println!(
-        "Ret {:?}, Ret2: {:?}",
-        builder.get::<u32>(),
-        builder.get::<u64>()
-    );
-
-    Ok(())
+        .cli(App)
+        .await
 }

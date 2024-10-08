@@ -2047,7 +2047,11 @@ name = "uhuh-cli"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "futures",
+ "uhuh-config",
  "uhuh-exp",
+ "uhuh-ext",
+ "vaerdi",
 ]
 
 [[package]]
@@ -2057,6 +2061,7 @@ dependencies = [
  "futures",
  "uhuh-exp",
  "uhuh-ext",
+ "vaerdi",
 ]
 
 [[package]]
