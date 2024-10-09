@@ -98,27 +98,6 @@ impl<C: BuildContext> Actions<C> {
             Box::pin(async move { action.run(ctx).await })
         }))
     }
-
-    //     pub async fn build(&mut self, ctx: &mut C::Build<'_>) -> Result<(), UhuhError> {
-    //         for action in self.build.drain(..) {
-    //             (action)(ctx).await?;
-    //         }
-    //         Ok(())
-    //     }
-
-    //     pub async fn init(&mut self, ctx: &mut C::Init<'_>) -> Result<(), UhuhError> {
-    //         for action in self.init.drain(..) {
-    //             (action)(ctx).await?;
-    //         }
-    //         Ok(())
-    //     }
-
-    //     pub async fn setup(&mut self, ctx: &mut C::Setup<'_>) -> Result<(), UhuhError> {
-    //         for action in self.setup.drain(..) {
-    //             (action)(ctx).await?;
-    //         }
-    //         Ok(())
-    //     }
 }
 
 impl<'t, C: BuildContext> BuildAction<C> for &'t mut Actions<C> {
@@ -161,4 +140,16 @@ impl<'t, C: BuildContext> InitAction<C> for &'t mut Actions<C> {
             Ok(())
         }
     }
+}
+
+pub trait OnBuild<C: BuildContext> {
+    fn on_build<T: BuildAction<C> + 'static>(&mut self, action: T);
+}
+
+pub trait OnSetup<C: BuildContext> {
+    fn on_setup<T: SetupAction<C> + 'static>(&mut self, action: T);
+}
+
+pub trait OnInit<C: BuildContext> {
+    fn on_init<T: InitAction<C> + 'static>(&mut self, action: T);
 }

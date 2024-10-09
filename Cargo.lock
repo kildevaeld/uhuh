@@ -2034,7 +2034,9 @@ name = "uhuh-app"
 version = "0.1.0"
 dependencies = [
  "daserror",
+ "futures",
  "serde",
+ "uhuh-ext",
 ]
 
 [[package]]

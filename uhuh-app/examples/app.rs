@@ -1,4 +1,4 @@
-use uhuh_app::BuildContext;
+use uhuh_app::{builder::Builder, BuildContext};
 
 struct Context {}
 
@@ -48,4 +48,11 @@ impl BuildContext for Context {
     }
 }
 
-fn main() {}
+fn main() {
+
+    futures::executor::block_on(async move {
+
+        let builder = Builder::new(Context {}).setup().await?.build().await?.
+
+    })
+}

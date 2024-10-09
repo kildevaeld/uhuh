@@ -6,3 +6,8 @@ edition = "2021"
 [dependencies]
 daserror = { path = "../daserror" }
 serde = { version = "1", default-features = false }
+
+
+[dev-dependencies]
+futures = { version = "0.3" }
+uhuh-ext = { path = "../uhuh-ext" }

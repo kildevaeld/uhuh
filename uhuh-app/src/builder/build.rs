@@ -1,4 +1,4 @@
-use crate::{Actions, BuildContext, UhuhError};
+use crate::{Actions, BuildContext, OnBuild, OnInit, OnSetup, UhuhError};
 
 use super::{init::InitPhase, Builder, Phase};
 
@@ -29,5 +29,17 @@ impl<C: BuildContext> Builder<BuildPhase<C>, C> {
     pub async fn build(self) -> Result<Builder<InitPhase<C>, C>, UhuhError> {
         let phase = self.phase.next().await?;
         Ok(Builder::from_phase(phase))
+    }
+}
+
+impl<C: BuildContext> OnBuild<C> for BuildPhase<C> {
+    fn on_build<T: crate::BuildAction<C> + 'static>(&mut self, action: T) {
+        self.actions.add_build(action);
+    }
+}
+
+impl<C: BuildContext> OnInit<C> for BuildPhase<C> {
+    fn on_init<T: crate::InitAction<C> + 'static>(&mut self, action: T) {
+        self.actions.add_init(action);
     }
 }
