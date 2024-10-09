@@ -4,24 +4,41 @@ use std::{future::Future, process::Output};
 
 use uhuh_config::{ConfigResolver, FsConfigResolver};
 use uhuh_exp::{
-    extensions::SetupBuildContext, BuildContext, Builder, LocalBoxFuture, Phase, SetupPhase,
-    UhuhError,
+    extensions::{ConfigureSetup, Setup, SetupBuildContext},
+    BuildContext, Builder, LocalBoxFuture, SetupPhase, UhuhError,
 };
 
-pub trait CliBuildContext: BuildContext + SetupBuildContext<Self> + Sized
-// where
-//     for<'a> Self::Setup<'a>: CliSetupContext<Self>,
-{
-    fn register_command<T: Cli<Self> + 'static>(&mut self, cli: T);
+// pub trait CliBuildContext: BuildContext + SetupBuildContext<Self> + Sized
+// // where
+// //     for<'a> Self::Setup<'a>: CliSetupContext<Self>,
+// {
+//     fn register_command<T: Cli<Self> + 'static>(&mut self, cli: T);
+// }
+
+pub trait CliSetupContext<C: BuildContext>: ConfigureSetup<C> {
+    fn register_command<T: Cli<C> + Sync + Send + 'static>(
+        &mut self,
+        cli: T,
+    ) -> Result<(), UhuhError>;
 }
 
-pub trait CliSetupContext<C: BuildContext> {
-    fn register_command<T: Cli<C> + 'static>(&mut self, cli: T);
+impl<C: 'static, F> CliSetupContext<C> for F
+where
+    C: BuildContext,
+    F: ConfigureSetup<C>,
+{
+    fn register_command<T: Cli<C> + Sync + Send + 'static>(
+        &mut self,
+        cli: T,
+    ) -> Result<(), UhuhError> {
+        self.configure_setup::<CliBuilder<C>>()?.register(cli);
+        Ok(())
+    }
 }
 
 pub trait BuilderExt<C>
 where
-    C: CliBuildContext,
+    C: BuildContext,
     for<'a> C::Setup<'a>: CliSetupContext<C>,
 {
     fn cli<T>(self, cli: T) -> impl Future<Output = Result<(), UhuhError>>
@@ -31,7 +48,7 @@ where
 
 impl<C: 'static> BuilderExt<C> for Builder<SetupPhase<C>, C>
 where
-    C: CliBuildContext,
+    C: BuildContext + SetupBuildContext<C> + uhuh_ext::Context,
     for<'a> C::Setup<'a>: CliSetupContext<C>,
 {
     fn cli<T>(self, cli: T) -> impl Future<Output = Result<(), UhuhError>>
@@ -39,9 +56,18 @@ where
         T: Cli<C>,
     {
         async move {
-            let builder = self.constant(init)?.setup().await?;
+            let mut builder = self.constant(CliBuilder::default())?.setup().await?;
+
+            let subcommands = builder
+                .context()
+                .get::<CliBuilder<C>>()
+                .ok_or_else(|| UhuhError::new("Cli builder not registered"))?;
 
             let app = cli.create_command();
+
+            let args = app.get_matches();
+
+            // cli.prepare(builder);
 
             Ok(())
         }
@@ -106,7 +132,7 @@ where
 }
 
 pub struct CliBuilder<C: BuildContext> {
-    cmds: Vec<Box<dyn DynCli<C>>>,
+    cmds: Vec<Box<dyn DynCli<C> + Send + Sync>>,
 }
 
 impl<C: BuildContext> Default for CliBuilder<C> {
@@ -120,8 +146,23 @@ impl<C: BuildContext> Default for CliBuilder<C> {
 impl<C: BuildContext + 'static> CliBuilder<C> {
     pub fn register<T>(&mut self, cli: T)
     where
-        T: Cli<C> + 'static,
+        T: Cli<C> + Sync + Send + 'static,
     {
         self.cmds.push(Box::new(CliBox(cli)))
     }
 }
+
+impl<C: BuildContext> Setup<C> for CliBuilder<C> {
+    type Output = SubCommands<C>;
+
+    type Error = UhuhError;
+
+    fn build(
+        self,
+        ctx: &mut <C as BuildContext>::Setup<'_>,
+    ) -> impl Future<Output = Result<Self::Output, Self::Error>> {
+        async move { Ok(SubCommands(self.cmds)) }
+    }
+}
+
+pub struct SubCommands<C>(Vec<Box<dyn DynCli<C> + Sync + Send>>);

@@ -72,7 +72,7 @@ where
 {
     pub fn constant<T>(mut self, init: T) -> Result<Self, UhuhError>
     where
-        T: Setup<C> + Send + Sync + 'static,
+        T: Setup<C> + 'static,
         T::Output: Send + Sync,
     {
         self.phase.context.register_constant(init)?;

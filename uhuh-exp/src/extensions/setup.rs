@@ -15,7 +15,7 @@ pub trait Setup<C: BuildContext> {
     fn build(
         self,
         ctx: &mut C::Setup<'_>,
-    ) -> impl Future<Output = Result<Self::Output, Self::Error>> + Send;
+    ) -> impl Future<Output = Result<Self::Output, Self::Error>>;
 }
 
 pub(crate) trait DynamicSetup<C: BuildContext> {
@@ -36,7 +36,7 @@ impl<T, C> DynamicSetup<C> for SetupBox<T>
 where
     C: BuildContext + 'static,
     for<'a> C::Setup<'a>: uhuh_ext::Context,
-    T: 'static + Setup<C> + Send,
+    T: 'static + Setup<C>,
     T::Output: Send + Sync + 'static,
     T::Error: 'static,
 {
@@ -66,11 +66,11 @@ where
     }
 }
 
-pub(crate) type BoxSetup<C> = Box<dyn DynamicSetup<C> + Send + Sync>;
+pub(crate) type BoxSetup<C> = Box<dyn DynamicSetup<C>>;
 
 pub(crate) fn setup_box<T, C>(extension: T) -> BoxSetup<C>
 where
-    T: 'static + Setup<C> + Send + Sync,
+    T: 'static + Setup<C>,
     T::Output: Send + Sync + 'static,
     T::Error: 'static,
     C: BuildContext + 'static,
@@ -98,7 +98,7 @@ where
 {
     pub fn insert<T>(&mut self, Setup: T) -> Result<(), UhuhError>
     where
-        T: 'static + Setup<C> + Send + Sync,
+        T: 'static + Setup<C>,
         T::Output: Send + Sync + 'static,
         T::Error: 'static,
     {
@@ -134,7 +134,7 @@ where
 
     pub fn get_mut<T>(&mut self) -> Result<&mut T, UhuhError>
     where
-        T: 'static + Setup<C> + Send + Sync,
+        T: 'static + Setup<C>,
         T::Output: Send + Sync + 'static,
         T::Error: 'static,
     {
@@ -160,10 +160,18 @@ where
 pub trait SetupBuildContext<C: BuildContext> {
     fn register_constant<T>(&mut self, setup: T) -> Result<(), UhuhError>
     where
-        T: 'static + Setup<C> + Send + Sync,
+        T: 'static + Setup<C>,
         T::Output: Send + Sync + 'static,
         T::Error: 'static,
         C: 'static;
+}
+
+pub trait ConfigureSetup<C: BuildContext> {
+    fn configure_setup<T>(&mut self) -> Result<&mut T, UhuhError>
+    where
+        T: 'static + Setup<C>,
+        T::Output: Send + Sync + 'static,
+        T::Error: 'static;
 }
 
 // pub trait SetupBuildContext<C: BuildContext> {

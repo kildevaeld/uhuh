@@ -1,6 +1,6 @@
-use uhuh_cli::{BuilderExt, Cli, CliBuildContext, CliBuilder, CliSetupContext};
+use uhuh_cli::{BuilderExt, Cli, CliBuilder, CliSetupContext};
 use uhuh_exp::{
-    extensions::{PluginsList, SetupBuildContext, SetupList},
+    extensions::{PluginsList, Setup, SetupBuildContext, SetupList},
     serde, BuildContext, Builder, Config, DynamicModule, Module, UhuhError,
 };
 use uhuh_ext::Extensions;
@@ -38,16 +38,16 @@ pub struct Context {
     cfg: Cfg,
 }
 
-impl CliBuildContext for Context {
-    fn register_command<T: uhuh_cli::Cli<Self> + 'static>(&mut self, cli: T) {
-        todo!()
-    }
-}
+// impl CliSetupContext<Self> for Context {
+//     fn register_command<T: uhuh_cli::Cli<Self> + 'static>(&mut self, cli: T) {
+//         todo!()
+//     }
+// }
 
 impl SetupBuildContext<Context> for Context {
     fn register_constant<T>(&mut self, setup: T) -> Result<(), UhuhError>
     where
-        T: 'static + uhuh_exp::extensions::Setup<Context> + Send + Sync,
+        T: 'static + uhuh_exp::extensions::Setup<Context>,
         T::Output: Send + Sync + 'static,
         T::Error: 'static,
         Context: 'static,
@@ -62,9 +62,9 @@ pub struct SetupCtx<'a> {
     ext: &'a mut Extensions,
 }
 
-impl<'a> CliSetupContext<Context> for SetupCtx<'a> {
-    fn register_command<T: uhuh_cli::Cli<Context> + 'static>(&mut self, cli: T) {}
-}
+// impl<'a> CliSetupContext<Context> for SetupCtx<'a> {
+//     fn register_command<T: uhuh_cli::Cli<Context> + 'static>(&mut self, cli: T) {}
+// }
 
 impl<'a> uhuh_ext::Context for SetupCtx<'a> {
     fn get<T: 'static + Send + Sync>(&self) -> Option<&T> {
@@ -73,6 +73,29 @@ impl<'a> uhuh_ext::Context for SetupCtx<'a> {
 
     fn register<T: 'static + Send + Sync>(&mut self, value: T) -> Option<T> {
         self.ext.insert(value)
+    }
+}
+
+impl<'a> uhuh_exp::extensions::SetupBuildContext<Context> for SetupCtx<'a> {
+    fn register_constant<T>(&mut self, setup: T) -> Result<(), UhuhError>
+    where
+        T: 'static + uhuh_exp::extensions::Setup<Context>,
+        T::Output: Send + Sync + 'static,
+        T::Error: 'static,
+        Context: 'static,
+    {
+        self.setup.insert(setup)
+    }
+}
+
+impl<'a> uhuh_exp::extensions::ConfigureSetup<Context> for SetupCtx<'a> {
+    fn configure_setup<T>(&mut self) -> Result<&mut T, UhuhError>
+    where
+        T: 'static + Setup<Context>,
+        T::Output: Send + Sync + 'static,
+        T::Error: 'static,
+    {
+        self.setup.get_mut()
     }
 }
 

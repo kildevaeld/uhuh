@@ -1,0 +1,8 @@
+[package]
+name = "uhuh-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+daserror = { path = "../daserror" }
+serde = { version = "1", default-features = false }

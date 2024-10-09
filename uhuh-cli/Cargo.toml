@@ -10,6 +10,7 @@ config = []
 clap = { version = "4" }
 uhuh-exp = { path = "../uhuh-exp" }
 uhuh-config = { path = "../uhuh-config", features = ["std"] }
+uhuh-ext = { path = "../uhuh-ext" }
 
 
 [dev-dependencies]

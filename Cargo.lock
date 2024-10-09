@@ -2030,6 +2030,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "uhuh-app"
+version = "0.1.0"
+dependencies = [
+ "daserror",
+ "serde",
+]
+
+[[package]]
 name = "uhuh-axum"
 version = "0.1.0"
 dependencies = [
