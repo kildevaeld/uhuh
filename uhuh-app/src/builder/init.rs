@@ -1,10 +1,11 @@
-use crate::{Actions, BuildContext, OnInit, UhuhError};
+use crate::{factory::Factories, Actions, BuildContext, Extensions, OnInit, UhuhError};
 
 use super::{Builder, Phase};
 
 pub struct InitPhase<C: BuildContext> {
     pub(super) context: C,
     pub(super) actions: Actions<C>,
+    pub(super) factories: Factories<C>,
 }
 
 impl<C: BuildContext> Phase<C> for InitPhase<C> {
@@ -13,6 +14,7 @@ impl<C: BuildContext> Phase<C> for InitPhase<C> {
     fn next(mut self) -> impl core::future::Future<Output = Result<Self::Next, crate::UhuhError>> {
         async move {
             self.context.run_init(&mut self.actions).await?;
+            self.context.run_init(&mut self.factories).await?;
             self.context.build().await
         }
     }

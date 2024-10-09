@@ -2035,6 +2035,8 @@ version = "0.1.0"
 dependencies = [
  "daserror",
  "futures",
+ "hashbrown 0.15.0",
+ "rustc-hash 2.0.0",
  "serde",
  "uhuh-ext",
 ]

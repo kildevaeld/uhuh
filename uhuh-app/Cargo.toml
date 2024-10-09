@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 daserror = { path = "../daserror" }
 serde = { version = "1", default-features = false }
+hashbrown = { version = "0.15", default-features = false }
+rustc-hash = { version = "2", default-features = false }
 
 
 [dev-dependencies]
